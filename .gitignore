@@ -1,0 +1,20 @@
+# macOS / Xcode
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+
+# SwiftPM
+.build/
+Packages/
+Package.resolved
+
+# Secrets / private packs (DO NOT COMMIT quote datasets)
+PrivatePacks/
+**/world-quotes-365/
+**/*.zip
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+
