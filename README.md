@@ -1,24 +1,69 @@
-# LorePocket (iOS)
+# LorePocket（iOS）
 
-LorePocket is a daily card-drawing app that lets you collect wisdom, lore, and knowledge as cards.
+**LorePocket** は、毎日1回カードを引いて「格言・知識・用語」をコレクションしていく iOSアプリです。  
+**アプリ本体（エンジン）は公開**しつつ、書籍由来などのデータは**端末ローカルにだけ取り込んで非公開運用**できる設計にしています。
 
-## Important (Copyright / Datasets)
+---
 
-This repository contains the **app engine only**.  
-Do **NOT** commit copyrighted quote datasets (e.g. book-derived texts).
+## できること（MVP）
+- **パック管理**: パック一覧→詳細
+- **1日1回ドロー（パックごと）**: 今日引ける/引けないを表示
+- **抽選**: 未所持カード優先 → 収集後は別柄（バリアント）コンプを狙える
+- **結果表示**: カード表示（レアリティ演出あり）
+- **図鑑（コレクション）**: 所持/未所持/全部、検索、ソート、進捗（カード/バリアント）
+- **インポート**: Markdown（複数 `.md`）からパック生成（ローカル保存）
 
-- Public: code, schemas, and **original sample packs** only
-- Private: your real datasets (Markdown/JSON/ZIP) should be kept locally
+> スクリーンショットは後日追加（`/docs/screenshots` 予定）
 
-## Development Workflow (Recommended)
+---
 
-- Edit in Cursor (Windows/macOS)
-- Run on **macOS + Xcode** (Simulator recommended)
+## 技術・設計（ポートフォリオ観点）
+- **SwiftUI** による画面実装
+- **ローカルファースト**: 進捗は `progress.json` として端末内に保存
+- **データとロジック分離**: 公開リポジトリに著作権データを含めない運用を前提化
+- **拡張しやすい構成**: パック（`pack.json / cards.json / variants.json`）をDocuments配下へ保存
 
-## Import (Markdown -> Pack)
+---
 
-From the Pack list screen, tap **インポート** and select multiple `.md` files (e.g. `001.md` ...).
+## 動作環境
+- **iOS 17+**（`@Observable / @Bindable` を使用）
+- **対応端末例**: iPhone SE（第3世代）を含む（iOS 17以上が条件）
 
-The app will parse the template described in `LorePocket_spec.md` and generate a private pack saved under the app's Documents directory.
+---
+
+## 著作権・データセットの扱い（重要）
+このリポジトリは **アプリ本体（エンジン）のみ** です。  
+書籍由来などの**著作権が絡む本文データはコミットしないでください**。
+
+- **公開OK**: コード、スキーマ、オリジナルのサンプルパック
+- **非公開運用**: 実データ（Markdown/JSON/ZIP/画像）※端末ローカルに取り込む
+
+---
+
+## 使い方（インポート：Markdown → Pack）
+パック一覧画面で **「インポート」** を押し、複数の `.md`（例: `001.md`〜）を選択します。  
+`LorePocket_spec.md` のテンプレ形式（frontmatter + 見出し）をパースし、**プライベートパック**として端末内に保存します。
+
+### カバー画像（任意）
+パックに絵柄（カバー）を付けたい場合、以下に画像を置くと自動表示されます（どれか1つ）:
+- `Documents/packs/<packId>/assets/cover.png`
+- `Documents/packs/<packId>/assets/cover.jpg`
+- `Documents/packs/<packId>/assets/cover.jpeg`
+
+---
+
+## 開発（開発者向け）
+**開発手順は残した方が良い**です。初見の人には上の説明を読ませ、必要な人だけここを見る構成が分かりやすいです。
+
+- **推奨フロー**: Cursorで編集 → **macOS + Xcode** で実行（Simulator推奨）
+- **Simulatorでの確認**: iPhone SE（3rd generation）を選んで ▶︎ Run
+- **データ確認**: Xcodeの Devices and Simulators からアプリコンテナを Download（`progress.json` 等）
+
+---
+
+## ロードマップ（例）
+- ZIPインポート（`pack.zip`）
+- パック内の画像/演出強化（別柄の表現拡張）
+- 通知/Widget など
 
 
