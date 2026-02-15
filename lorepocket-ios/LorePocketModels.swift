@@ -62,4 +62,34 @@ struct ProgressRoot: Codable, Hashable {
     var packs: [String: PackProgress] = [:]
 }
 
+// MARK: - Collection UI
 
+enum Rarity: String, CaseIterable, Comparable {
+    case common, rare, epic, legendary
+
+    static func < (lhs: Rarity, rhs: Rarity) -> Bool {
+        let order: [Rarity] = [.common, .rare, .epic, .legendary]
+        return order.firstIndex(of: lhs)! < order.firstIndex(of: rhs)!
+    }
+
+    init?(variantRarity: String) {
+        switch variantRarity.lowercased() {
+        case "common": self = .common
+        case "rare": self = .rare
+        case "epic": self = .epic
+        case "legendary": self = .legendary
+        default: return nil
+        }
+    }
+}
+
+struct CardListItem: Identifiable, Hashable {
+    var id: String { cardId }
+    let cardId: String
+    let title: String
+    let subtitle: String
+    let isOwned: Bool
+    let topRarity: Rarity?
+    let isFavorite: Bool
+    let isNew: Bool
+}

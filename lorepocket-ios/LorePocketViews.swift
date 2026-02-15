@@ -519,153 +519,69 @@ struct DrawResultView: View {
 struct CollectionView: View {
     let pack: Pack
     @Bindable var store: ProgressStore
-    
-    @State private var query: String = ""
-    @State private var filter: Filter = .owned
-    @State private var sort: Sort = .day
-    
-    enum Filter: String, CaseIterable, Identifiable {
-        case owned = "所持"
-        case unowned = "未所持"
-        case all = "全部"
-        var id: String { rawValue }
+    @State private var viewModel: CollectionViewModel
+
+    private var columns: [GridItem] {
+        [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
     }
-    
-    enum Sort: String, CaseIterable, Identifiable {
-        case day = "日付順"
-        case person = "人物"
-        case recent = "最近取得"
-        var id: String { rawValue }
+
+    init(pack: Pack, store: ProgressStore) {
+        self.pack = pack
+        self.store = store
+        _viewModel = State(initialValue: CollectionViewModel(pack: pack, store: store))
     }
-    
-    private var progress: PackProgress { store.progress(for: pack.id) }
-    private var stats: PackStats { PackStats(pack: pack, progress: progress) }
-    
-    private var ownedByCard: [String: [OwnedCard]] {
-        Dictionary(grouping: progress.owned, by: { $0.cardId })
-    }
-    
-    private func dayNumber(from cardId: String) -> Int? {
-        // packId-001 形式を想定
-        let parts = cardId.split(separator: "-")
-        guard let last = parts.last, let n = Int(last) else { return nil }
-        return n
-    }
-    
-    private var filteredCards: [Card] {
-        var base: [Card] = {
-            switch filter {
-            case .owned:
-                return pack.cards.filter { ownedByCard[$0.id] != nil }
-            case .unowned:
-                return pack.cards.filter { ownedByCard[$0.id] == nil }
-            case .all:
-                return pack.cards
-            }
-        }()
-        
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !q.isEmpty {
-            base = base.filter { card in
-                card.text.localizedCaseInsensitiveContains(q)
-                || card.person.localizedCaseInsensitiveContains(q)
-                || card.background.localizedCaseInsensitiveContains(q)
-                || card.genre.contains(where: { $0.localizedCaseInsensitiveContains(q) })
-                || card.topics.contains(where: { $0.localizedCaseInsensitiveContains(q) })
-            }
-        }
-        
-        switch sort {
-        case .day:
-            return base.sorted {
-                let a = dayNumber(from: $0.id) ?? Int.max
-                let b = dayNumber(from: $1.id) ?? Int.max
-                if a != b { return a < b }
-                return $0.id < $1.id
-            }
-        case .person:
-            return base.sorted {
-                if $0.person != $1.person { return $0.person < $1.person }
-                return $0.id < $1.id
-            }
-        case .recent:
-            return base.sorted {
-                let a = stats.lastObtainedAt(for: $0.id) ?? .distantPast
-                let b = stats.lastObtainedAt(for: $1.id) ?? .distantPast
-                if a != b { return a > b }
-                return $0.id < $1.id
-            }
-        }
-    }
-    
+
     var body: some View {
-        List {
-            Section {
-                Picker("フィルタ", selection: $filter) {
-                    ForEach(Filter.allCases) { f in
-                        Text(f.rawValue).tag(f)
-                    }
+        @Bindable var vm = viewModel
+        VStack(spacing: 8) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text(vm.packTitle)
+                        .font(.title2).bold()
+                    Text(vm.progressText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                .pickerStyle(.segmented)
+                Spacer()
             }
-            
-            Section {
-                Picker("ソート", selection: $sort) {
-                    ForEach(Sort.allCases) { s in
-                        Text(s.rawValue).tag(s)
+            .padding(.horizontal)
+
+            HStack {
+                TextField("検索", text: $vm.query)
+                    .textFieldStyle(.roundedBorder)
+
+                Picker("", selection: $vm.sort) {
+                    ForEach(CollectionViewModel.SortOption.allCases) { opt in
+                        Text(opt.rawValue).tag(opt)
                     }
                 }
                 .pickerStyle(.menu)
             }
-            
-            Section("進捗") {
-                HStack {
-                    Text("カード")
-                    Spacer()
-                    Text("\(stats.ownedUniqueCards)/\(stats.totalCards)")
-                        .foregroundStyle(.secondary)
-                }
-                ProgressView(value: stats.cardCompletion)
-                
-                HStack {
-                    Text("別柄（バリアント）")
-                    Spacer()
-                    Text("\(stats.ownedUniquePairs)/\(stats.totalPossiblePairs)")
-                        .foregroundStyle(.secondary)
-                }
-                ProgressView(value: stats.variantCompletion)
-            }
-            
-            Section {
-                ForEach(filteredCards) { card in
-                    NavigationLink {
-                        CardDetailView(card: card, pack: pack, owned: ownedByCard[card.id] ?? [])
-                    } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(card.text)
-                                .font(.body)
-                                .lineLimit(2)
-                            Text(card.person)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            
-                            let ownedVariants = stats.ownedVariants(for: card.id)
-                            if !ownedVariants.isEmpty || filter == .all {
-                                Text("別柄: \(ownedVariants.count)/\(stats.totalVariants)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+            .padding(.horizontal)
+
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(vm.filteredItems) { item in
+                        NavigationLink(value: item) {
+                            CardThumbnailView(item: item)
                         }
-                        .padding(.vertical, 4)
+                        .buttonStyle(.plain)
                     }
                 }
-            } footer: {
-                Text("検索は本文・人物・背景・ジャンル・Topicsを対象にします。")
+                .padding()
             }
         }
         .navigationTitle("コレクション")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, prompt: "検索（本文/人物/背景/ジャンル/Topics）")
+        .navigationDestination(for: CardListItem.self) { item in
+            CardDetailView(cardId: item.cardId, pack: pack, store: store)
+        }
+        .onAppear {
+            viewModel.refresh()
+        }
+        .onChange(of: store.root) {
+            viewModel.refresh()
+        }
     }
 }
 
@@ -673,10 +589,23 @@ struct CardDetailView: View {
     let card: Card
     let pack: Pack
     let owned: [OwnedCard]
-    
+
+    init(cardId: String, pack: Pack, store: ProgressStore) {
+        let card = pack.cards.first(where: { $0.id == cardId })
+            ?? pack.cards.first!
+        let owned = store.progress(for: pack.id).owned.filter { $0.cardId == cardId }
+        self.init(card: card, pack: pack, owned: owned)
+    }
+
+    init(card: Card, pack: Pack, owned: [OwnedCard]) {
+        self.card = card
+        self.pack = pack
+        self.owned = owned
+    }
+
     @State private var selectedVariantId: String? = nil
     @State private var copiedToast = false
-    
+
     private var ownedVariantIds: [String] {
         Array(Set(owned.map(\.variantId))).sorted()
     }
@@ -706,12 +635,18 @@ struct CardDetailView: View {
                     } label: {
                         Label("コピー", systemImage: "doc.on.doc")
                     }
-                    
+
                     Spacer()
-                    
+
                     ShareLink(item: "\(card.text)\n— \(card.person)") {
                         Label("共有", systemImage: "square.and.arrow.up")
                     }
+                }
+
+                NavigationLink {
+                    ShowcaseView(card: card)
+                } label: {
+                    Label("3D展示で飾る", systemImage: "cube.transparent")
                 }
             }
             
