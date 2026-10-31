@@ -5,13 +5,18 @@ import Observation
 @Observable
 final class ProgressStore {
     private(set) var root: ProgressRoot
+    private(set) var loadWarning: String?
 
+    private var writesEnabled: Bool
     private let fileURL: URL
 
     init(filename: String = "progress.json", directory: URL? = nil) {
         let directory = directory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         self.fileURL = directory.appendingPathComponent(filename)
-        self.root = (try? ProgressCoding.load(from: fileURL)) ?? .init()
+        let session = ProgressSession.open(url: fileURL)
+        self.root = session.root
+        self.writesEnabled = session.writesEnabled
+        self.loadWarning = session.loadWarning
     }
 
     func progress(for packId: String) -> PackProgress {
@@ -28,19 +33,27 @@ final class ProgressStore {
 
     func recordDraw(packId: String, ownedCard: OwnedCard) {
         ProgressBook.recordDraw(root: &root, packId: packId, ownedCard: ownedCard)
-        save()
+        persist()
     }
 
     func resetAll() {
         ProgressBook.resetAll(root: &root)
-        save()
+        writesEnabled = true
+        loadWarning = nil
+        persist()
     }
 
-    private func save() {
+    private func persist() {
+        var session = ProgressSession(
+            root: root,
+            writesEnabled: writesEnabled,
+            loadWarning: loadWarning,
+            quarantineURL: nil
+        )
         do {
-            try ProgressCoding.save(root, to: fileURL)
+            try session.persist(to: fileURL)
         } catch {
-            // 保存失敗は画面に出さない。破損ファイルを空で上書きしない処置は LP-24 で足す。
+            // 書き込み不能でもメモリ上の所持は残す。壊れたファイルは writesEnabled が false の間は触らない。
         }
     }
 }
