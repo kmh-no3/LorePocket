@@ -73,6 +73,12 @@ final class CollectionViewModel {
         buildItems()
     }
 
+    func toggleFavorite(cardId: String) {
+        let current = store.isFavorite(packId: pack.id, cardId: cardId)
+        store.setFavorite(packId: pack.id, cardId: cardId, isFavorite: !current)
+        refresh()
+    }
+
     private func buildItems() {
         let progress = store.progress(for: pack.id)
         let stats = PackStats(pack: pack, progress: progress)
@@ -98,7 +104,7 @@ final class CollectionViewModel {
                 subtitle: card.genre.isEmpty ? "" : card.genre.joined(separator: " / "),
                 isOwned: isOwned,
                 topRarity: topRarity,
-                isFavorite: false,
+                isFavorite: progress.favoriteCardIds.contains(card.id),
                 isNew: isNew
             )
         }

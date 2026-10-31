@@ -5,22 +5,23 @@ import Observation
 @Observable
 final class PackLibrary {
     private(set) var packs: [Pack] = []
-    
-    init() {
+
+    private let storageBase: URL?
+
+    init(storageBase: URL? = nil) {
+        self.storageBase = storageBase
         reload()
     }
-    
+
     func reload() {
-        let imported = PackStorage.loadAllPacks()
-        // サンプルは常に表示（公開用）
-        self.packs = [SamplePacks.samplePack] + imported
+        let imported = PackStorage.loadAllPacks(base: storageBase)
+        self.packs = PackCatalog.displayedPacks(imported: imported)
     }
-    
-    func importWorldQuotesMarkdown(fileURLs: [URL]) throws {
-        let pack = try WorldQuotesImport.makePack(fromMarkdownFiles: fileURLs)
-        try PackStorage.savePack(pack)
+
+    @discardableResult
+    func importWorldQuotesMarkdown(fileURLs: [URL]) throws -> PackCatalog.MarkdownImportReport {
+        let report = try PackCatalog.importWorldQuotesMarkdown(fileURLs: fileURLs, base: storageBase)
         reload()
+        return report
     }
 }
-
-

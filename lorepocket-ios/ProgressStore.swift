@@ -5,62 +5,82 @@ import Observation
 @Observable
 final class ProgressStore {
     private(set) var root: ProgressRoot
-    
+    private(set) var loadWarning: String?
+
+    private var writesEnabled: Bool
     private let fileURL: URL
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
-    
-    init(filename: String = "progress.json") {
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
-        self.encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        self.encoder.dateEncodingStrategy = .iso8601
-        self.decoder.dateDecodingStrategy = .iso8601
-        
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        self.fileURL = docs.appendingPathComponent(filename)
-        
-        self.root = (try? Self.load(from: fileURL, decoder: decoder)) ?? .init()
+
+    init(filename: String = "progress.json", directory: URL? = nil) {
+        let directory = directory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        self.fileURL = directory.appendingPathComponent(filename)
+        let session = ProgressSession.open(url: fileURL)
+        self.root = session.root
+        self.writesEnabled = session.writesEnabled
+        self.loadWarning = session.loadWarning
     }
-    
+
     func progress(for packId: String) -> PackProgress {
-        root.packs[packId] ?? PackProgress()
+        ProgressBook.progress(in: root, packId: packId)
     }
-    
+
     func canDrawToday(packId: String, calendar: Calendar = .current) -> Bool {
-        guard let last = progress(for: packId).lastDrawDate else { return true }
-        return !calendar.isDateInToday(last)
+        ProgressBook.canDraw(
+            lastDrawDate: progress(for: packId).lastDrawDate,
+            now: Date(),
+            calendar: calendar
+        )
     }
-    
+
     func recordDraw(packId: String, ownedCard: OwnedCard) {
-        var p = progress(for: packId)
-        if !p.owned.contains(where: { $0.cardId == ownedCard.cardId && $0.variantId == ownedCard.variantId }) {
-            p.owned.append(ownedCard)
-        }
-        p.lastDrawDate = ownedCard.obtainedAt
-        p.drawCount += 1
-        root.packs[packId] = p
-        save()
+        ProgressBook.recordDraw(root: &root, packId: packId, ownedCard: ownedCard)
+        persist()
     }
-    
+
+    func isFavorite(packId: String, cardId: String) -> Bool {
+        ProgressBook.isFavorite(root: root, packId: packId, cardId: cardId)
+    }
+
+    func setFavorite(packId: String, cardId: String, isFavorite: Bool) {
+        ProgressBook.setFavorite(root: &root, packId: packId, cardId: cardId, isFavorite: isFavorite)
+        persist()
+    }
+
+    func reflection(packId: String, cardId: String) -> CardReflection? {
+        ProgressBook.reflection(in: root, packId: packId, cardId: cardId)
+    }
+
+    func setReflection(packId: String, cardId: String, body: String, now: Date = Date()) {
+        ProgressBook.setReflection(root: &root, packId: packId, cardId: cardId, body: body, now: now)
+        persist()
+    }
+
+    func analysis(packId: String, cardId: String) -> CardAnalysis? {
+        ProgressBook.analysis(in: root, packId: packId, cardId: cardId)
+    }
+
+    func setAnalysis(packId: String, cardId: String, analysis: CardAnalysis) {
+        ProgressBook.setAnalysis(root: &root, packId: packId, cardId: cardId, analysis: analysis)
+        persist()
+    }
+
     func resetAll() {
-        root = .init()
-        save()
+        ProgressBook.resetAll(root: &root)
+        writesEnabled = true
+        loadWarning = nil
+        persist()
     }
-    
-    private func save() {
+
+    private func persist() {
+        var session = ProgressSession(
+            root: root,
+            writesEnabled: writesEnabled,
+            loadWarning: loadWarning,
+            quarantineURL: nil
+        )
         do {
-            let data = try encoder.encode(root)
-            try data.write(to: fileURL, options: [.atomic])
+            try session.persist(to: fileURL)
         } catch {
-            // MVP: UIに出すほどではないので握りつぶし（将来ログ/アラート化）
+            // 書き込み不能でもメモリ上の所持は残す。壊れたファイルは writesEnabled が false の間は触らない。
         }
-    }
-    
-    private static func load(from url: URL, decoder: JSONDecoder) throws -> ProgressRoot {
-        let data = try Data(contentsOf: url)
-        return try decoder.decode(ProgressRoot.self, from: data)
     }
 }
-
-

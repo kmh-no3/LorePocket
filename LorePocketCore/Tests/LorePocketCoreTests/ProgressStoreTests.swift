@@ -1,0 +1,264 @@
+import XCTest
+@testable import LorePocketCore
+
+final class ProgressStoreTests: XCTestCase {
+    func testCanDrawWhenThePackHasNeverBeenDrawn() {
+        let calendar = EngineFixtures.tokyoCalendar()
+        let now = EngineFixtures.date(2026, 10, 31, 21, 0, calendar: calendar)
+        XCTAssertTrue(ProgressBook.canDraw(lastDrawDate: nil, now: now, calendar: calendar))
+    }
+
+    func testSameTokyoCalendarDayBlocksAndNextDayAllows() {
+        let calendar = EngineFixtures.tokyoCalendar()
+        let morning = EngineFixtures.date(2026, 10, 31, 0, 30, calendar: calendar)
+        let night = EngineFixtures.date(2026, 10, 31, 23, 30, calendar: calendar)
+        let nextMorning = EngineFixtures.date(2026, 11, 1, 0, 10, calendar: calendar)
+
+        XCTAssertFalse(ProgressBook.canDraw(lastDrawDate: morning, now: night, calendar: calendar))
+        XCTAssertTrue(ProgressBook.canDraw(lastDrawDate: night, now: nextMorning, calendar: calendar))
+    }
+
+    func testRecordDrawKeepsTheCardAndDoesNotDuplicateThePair() {
+        var root = ProgressRoot()
+        let owned = OwnedCard(
+            cardId: "sample-pack-001-001",
+            variantId: "common",
+            obtainedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let other = OwnedCard(
+            cardId: "other-pack-001",
+            variantId: "foil",
+            obtainedAt: owned.obtainedAt
+        )
+        ProgressBook.recordDraw(root: &root, packId: "other", ownedCard: other)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.drawCount, 2)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.lastDrawDate, owned.obtainedAt)
+        XCTAssertEqual(root.packs["other"]?.owned, [other])
+    }
+
+    func testLegacyJSONWithoutDrawCountKeepsOwnedCards() throws {
+        let json = """
+        {
+          "packs": {
+            "sample-pack-001": {
+              "lastDrawDate": "2026-01-01T00:00:00Z",
+              "owned": [
+                {
+                  "cardId": "sample-pack-001-001",
+                  "variantId": "common",
+                  "obtainedAt": "2026-01-01T00:00:00Z"
+                }
+              ]
+            }
+          }
+        }
+        """.data(using: .utf8)!
+
+        let root = try ProgressCoding.decode(json)
+        let progress = root.packs["sample-pack-001"]
+        XCTAssertEqual(progress?.owned.count, 1)
+        XCTAssertEqual(progress?.owned.first?.cardId, "sample-pack-001-001")
+        XCTAssertEqual(progress?.owned.first?.variantId, "common")
+        XCTAssertEqual(progress?.drawCount, 0)
+        XCTAssertNotNil(progress?.lastDrawDate)
+    }
+
+    func testUnknownKeysDoNotDropOwnedCards() throws {
+        let json = """
+        {
+          "packs": {
+            "sample-pack-001": {
+              "drawCount": 3,
+              "futureField": true,
+              "owned": [
+                {
+                  "cardId": "sample-pack-001-004",
+                  "variantId": "legend",
+                  "obtainedAt": "2026-04-02T03:04:05Z",
+                  "note": "ignore"
+                }
+              ]
+            }
+          },
+          "albums": []
+        }
+        """.data(using: .utf8)!
+
+        let root = try ProgressCoding.decode(json)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned.count, 1)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.drawCount, 3)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned.first?.variantId, "legend")
+    }
+
+    func testRoundTripPreservesOwnedCards() throws {
+        var root = ProgressRoot()
+        let owned = OwnedCard(
+            cardId: "sample-pack-001-002",
+            variantId: "foil",
+            obtainedAt: Date(timeIntervalSince1970: 1_767_225_600)
+        )
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+    }
+
+    func testCorruptJSONThrowsAndFileRoundTrip() throws {
+        XCTAssertThrowsError(try ProgressCoding.decode(Data("{\"packs\":".utf8)))
+
+        let directory = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var root = ProgressRoot()
+        let owned = OwnedCard(
+            cardId: "sample-pack-001-001",
+            variantId: "common",
+            obtainedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        let url = directory.appendingPathComponent("progress.json")
+        try ProgressCoding.save(root, to: url)
+        XCTAssertEqual(try ProgressCoding.load(from: url), root)
+    }
+
+    func testFavoriteDoesNotDropOwnedCards() throws {
+        var root = ProgressRoot()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let owned = OwnedCard(cardId: "sample-pack-001-001", variantId: "common", obtainedAt: now)
+        let other = OwnedCard(cardId: "other-001", variantId: "foil", obtainedAt: now)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.recordDraw(root: &root, packId: "other", ownedCard: other)
+
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: true)
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: true)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["other"]?.owned, [other])
+        XCTAssertTrue(ProgressBook.isFavorite(root: root, packId: "sample-pack-001", cardId: owned.cardId))
+
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: false)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.drawCount, 1)
+    }
+
+    func testReflectionKeepsOwnedCardsAndFavorites() throws {
+        var root = ProgressRoot()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let owned = OwnedCard(cardId: "sample-pack-001-003", variantId: "foil", obtainedAt: now)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: true)
+        ProgressBook.setReflection(
+            root: &root,
+            packId: "sample-pack-001",
+            cardId: owned.cardId,
+            body: "  自分のメモ。\n次の行。  ",
+            now: now
+        )
+
+        let note = root.packs["sample-pack-001"]?.reflections[owned.cardId]
+        XCTAssertEqual(note?.body, "自分のメモ。\n次の行。")
+        XCTAssertEqual(note?.updatedAt, now)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
+
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+
+        ProgressBook.setReflection(root: &root, packId: "sample-pack-001", cardId: owned.cardId, body: "   ", now: now)
+        XCTAssertNil(root.packs["sample-pack-001"]?.reflections[owned.cardId])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
+    }
+
+    func testAnalysisDoesNotOverwriteReflectionOrOwnedCards() throws {
+        var root = ProgressRoot()
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let owned = OwnedCard(cardId: "sample-pack-001-008", variantId: "common", obtainedAt: now)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.setReflection(root: &root, packId: "sample-pack-001", cardId: owned.cardId, body: "本人の言葉", now: now)
+        let analysis = CardAnalysis(
+            citation: "短い引用。",
+            workBackground: "架空の作品背景。",
+            commentary: "取り込み済みの分析文。",
+            updatedAt: now
+        )
+        ProgressBook.setAnalysis(root: &root, packId: "sample-pack-001", cardId: owned.cardId, analysis: analysis)
+
+        XCTAssertEqual(root.packs["sample-pack-001"]?.reflections[owned.cardId]?.body, "本人の言葉")
+        XCTAssertEqual(root.packs["sample-pack-001"]?.analyses[owned.cardId], analysis)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+
+        ProgressBook.setAnalysis(
+            root: &root,
+            packId: "sample-pack-001",
+            cardId: owned.cardId,
+            analysis: CardAnalysis(citation: "  ", workBackground: nil, commentary: nil, updatedAt: now)
+        )
+        XCTAssertNil(root.packs["sample-pack-001"]?.analyses[owned.cardId])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.reflections[owned.cardId]?.body, "本人の言葉")
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+    }
+
+    func testLegacyJSONHasEmptyFavorites() throws {
+        let json = """
+        {"packs":{"sample-pack-001":{"drawCount":1,"owned":[{"cardId":"sample-pack-001-001","variantId":"common","obtainedAt":"2026-01-01T00:00:00Z"}]}}}
+        """.data(using: .utf8)!
+        let root = try ProgressCoding.decode(json)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.reflections, [:])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.analyses, [:])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned.count, 1)
+    }
+
+    func testDrawThenRecordBlocksThatDayAndKeepsTheCard() throws {
+        let calendar = EngineFixtures.tokyoCalendar()
+        let now = EngineFixtures.date(2026, 10, 31, 8, 0, calendar: calendar)
+        let tomorrow = EngineFixtures.date(2026, 11, 1, 8, 0, calendar: calendar)
+        let pack = SamplePacks.samplePack
+        var root = ProgressRoot()
+
+        var rng = SplitMix64(state: 4)
+        let first = try DrawEngine.draw(
+            pack: pack,
+            progress: ProgressBook.progress(in: root, packId: pack.id),
+            now: now,
+            rng: &rng
+        )
+        ProgressBook.recordDraw(root: &root, packId: pack.id, ownedCard: first.ownedCard)
+
+        XCTAssertFalse(ProgressBook.canDraw(
+            lastDrawDate: root.packs[pack.id]?.lastDrawDate,
+            now: now,
+            calendar: calendar
+        ))
+        XCTAssertTrue(ProgressBook.canDraw(
+            lastDrawDate: root.packs[pack.id]?.lastDrawDate,
+            now: tomorrow,
+            calendar: calendar
+        ))
+
+        var rng2 = SplitMix64(state: 11)
+        _ = try DrawEngine.draw(
+            pack: pack,
+            progress: ProgressBook.progress(in: root, packId: pack.id),
+            now: tomorrow,
+            rng: &rng2
+        )
+        let secondOwned = OwnedCard(cardId: "sample-pack-001-009", variantId: "common", obtainedAt: tomorrow)
+        ProgressBook.recordDraw(root: &root, packId: pack.id, ownedCard: secondOwned)
+
+        let owned = root.packs[pack.id]?.owned ?? []
+        XCTAssertTrue(owned.contains(where: { $0.cardId == first.ownedCard.cardId && $0.variantId == first.ownedCard.variantId }))
+        XCTAssertTrue(owned.contains(secondOwned))
+        XCTAssertEqual(root.packs[pack.id]?.drawCount, 2)
+    }
+}

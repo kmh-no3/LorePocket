@@ -1,0 +1,208 @@
+import XCTest
+@testable import LorePocketCore
+
+final class PackLibraryTests: XCTestCase {
+    func testSamplePackStaysShortAndIsAlwaysFirst() {
+        let pack = SamplePacks.samplePack
+        XCTAssertEqual(pack.cards.count, 10)
+        XCTAssertEqual(pack.meta.legal.redistribution, "allowed")
+        XCTAssertEqual(pack.meta.legal.source, "public")
+        for card in pack.cards {
+            XCTAssertLessThan(card.text.count, 200)
+            XCTAssertTrue(card.id.hasPrefix(pack.id + "-"))
+        }
+
+        let imported = EngineFixtures.pack(id: "aaa-pack", cards: [EngineFixtures.card(id: "aaa-pack-001")], title: "AAA")
+        let displayed = PackCatalog.displayedPacks(imported: [imported])
+        XCTAssertEqual(displayed.map(\.id), [SamplePacks.samplePack.id, "aaa-pack"])
+    }
+
+    func testSaveAndLoadFixesCardCountAndFillsMissingVariants() throws {
+        let directory = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let card = EngineFixtures.card(id: "local-pack-001")
+        let pack = EngineFixtures.pack(id: "local-pack", cards: [card], variants: PackStorage.defaultVariants(), title: "Local")
+        let wrongCount = Pack(
+            meta: PackMeta(
+                packId: pack.id,
+                title: "Local",
+                version: "1.0.0",
+                language: "ja",
+                description: "local fixture",
+                cardCount: 99,
+                tags: ["local"],
+                legal: .init(source: "public", redistribution: "allowed")
+            ),
+            cards: pack.cards,
+            variants: pack.variants
+        )
+        try PackStorage.savePack(wrongCount, base: directory)
+
+        let variantURL = try PackStorage.packDirectory(packId: pack.id, base: directory)
+            .appendingPathComponent("variants.json")
+        try FileManager.default.removeItem(at: variantURL)
+        let cover = try PackStorage.packDirectory(packId: pack.id, base: directory)
+            .appendingPathComponent("assets", isDirectory: true)
+        try FileManager.default.createDirectory(at: cover, withIntermediateDirectories: true)
+        try Data("cover".utf8).write(to: cover.appendingPathComponent("cover.png"))
+
+        let loaded = try PackStorage.loadPack(packId: pack.id, base: directory)
+        XCTAssertEqual(loaded.cards.count, 1)
+        XCTAssertEqual(loaded.meta.cardCount, 1)
+        XCTAssertEqual(loaded.variants.map(\.variantId), ["common", "foil", "legend"])
+        let coverData = try Data(contentsOf: cover.appendingPathComponent("cover.png"))
+        XCTAssertEqual(coverData, Data("cover".utf8))
+    }
+
+    func testLoadAllPacksSortsByTitleAndSkipsJunk() throws {
+        let directory = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let zeta = EngineFixtures.pack(id: "zeta", cards: [EngineFixtures.card(id: "zeta-001")], title: "Zeta")
+        let alpha = EngineFixtures.pack(id: "alpha", cards: [EngineFixtures.card(id: "alpha-001")], title: "Alpha")
+        try PackStorage.savePack(zeta, base: directory)
+        try PackStorage.savePack(alpha, base: directory)
+        let junk = try PackStorage.packsDirectory(base: directory).appendingPathComponent("junk", isDirectory: true)
+        try FileManager.default.createDirectory(at: junk, withIntermediateDirectories: true)
+        try Data("nope".utf8).write(to: junk.appendingPathComponent("note.txt"))
+
+        XCTAssertEqual(PackStorage.loadAllPacks(base: directory).map(\.id), ["alpha", "zeta"])
+    }
+
+    func testMarkdownImportWritesPackWithoutTouchingProgress() throws {
+        let directory = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let progressURL = directory.appendingPathComponent("progress.json")
+        try Data("keep-owned-cards".utf8).write(to: progressURL)
+
+        let fileA = directory.appendingPathComponent("002.md")
+        let fileB = directory.appendingPathComponent("001.md")
+        try markdown(day: "002", text: "二枚目のテスト文。").write(to: fileA, atomically: true, encoding: .utf8)
+        try markdown(day: "001", text: "一枚目のテスト文。").write(to: fileB, atomically: true, encoding: .utf8)
+        try "not a card".write(to: directory.appendingPathComponent("skip.md"), atomically: true, encoding: .utf8)
+
+        try PackCatalog.importWorldQuotesMarkdown(fileURLs: [fileA, fileB, directory.appendingPathComponent("skip.md")], base: directory)
+
+        let imported = PackStorage.loadAllPacks(base: directory)
+        XCTAssertEqual(imported.count, 1)
+        XCTAssertEqual(imported[0].id, WorldQuotesImport.packId)
+        XCTAssertEqual(imported[0].cards.map(\.id), [
+            "\(WorldQuotesImport.packId)-001",
+            "\(WorldQuotesImport.packId)-002",
+        ])
+        XCTAssertEqual(imported[0].cards.map(\.text), ["一枚目のテスト文。", "二枚目のテスト文。"])
+        XCTAssertEqual(try String(contentsOf: progressURL, encoding: .utf8), "keep-owned-cards")
+
+        let displayed = PackCatalog.displayedPacks(imported: imported)
+        XCTAssertEqual(displayed.first?.id, SamplePacks.samplePack.id)
+        XCTAssertEqual(displayed.count, 2)
+    }
+
+    func testMarkdownParserReadsTheTemplateAndRejectsAnEmptyQuote() throws {
+        let parsed = try XCTUnwrap(MarkdownCardParser.parse(markdown: markdown(day: "7", text: "ノートを開いておく。")))
+        XCTAssertEqual(parsed.day, "7")
+        XCTAssertEqual(parsed.person, "架空の人")
+        XCTAssertEqual(parsed.genre, ["試験"])
+        XCTAssertEqual(parsed.text, "ノートを開いておく。")
+        XCTAssertEqual(parsed.background, "テスト背景。")
+        XCTAssertEqual(parsed.topics, ["alpha", "beta"])
+        XCTAssertNil(MarkdownCardParser.parse(markdown: "## 格言\n\n"))
+        XCTAssertEqual(WorldQuotesImport.normalizedDay("day-7"), "007")
+        XCTAssertEqual(WorldQuotesImport.normalizedDay("no-digits"), "000")
+    }
+
+    func testDetailedMarkdownKeepsAnalysisSeparateAndNamesFailures() throws {
+        let directory = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let good = directory.appendingPathComponent("003.md")
+        let bad = directory.appendingPathComponent("bad.md")
+        try detailedMarkdown.write(to: good, atomically: true, encoding: .utf8)
+        try "ただのメモ".write(to: bad, atomically: true, encoding: .utf8)
+
+        let built = try WorldQuotesImport.build(fromMarkdownFiles: [good, bad])
+        XCTAssertEqual(built.failures.map(\.fileName), ["bad.md"])
+        XCTAssertTrue(built.failures[0].reason.contains("格言"))
+        let card = try XCTUnwrap(built.pack.cards.first)
+        XCTAssertEqual(card.kind, .history)
+        XCTAssertEqual(card.sourceTitle, "架空史")
+        XCTAssertEqual(card.text, "川のそばに都市がある。")
+        XCTAssertEqual(card.longForm, "長い解説。")
+        XCTAssertTrue(card.sections.contains { $0.heading == "補足" && $0.body == "補足の本文。" })
+        XCTAssertTrue(card.sections.contains { $0.heading == "note" && $0.body == "任意メモ" })
+        XCTAssertEqual(built.analyses[card.id]?.citation, "短い引用。")
+        XCTAssertEqual(built.analyses[card.id]?.workBackground, "架空の時代。")
+        XCTAssertEqual(built.analyses[card.id]?.commentary, "取り込み分析。")
+        XCTAssertNotEqual(card.longForm, built.analyses[card.id]?.commentary)
+
+        var root = ProgressRoot()
+        let owned = OwnedCard(cardId: card.id, variantId: "common", obtainedAt: Date(timeIntervalSince1970: 20))
+        ProgressBook.recordDraw(root: &root, packId: built.pack.id, ownedCard: owned)
+        ProgressBook.setAnalysis(root: &root, packId: built.pack.id, cardId: card.id, analysis: try XCTUnwrap(built.analyses[card.id]))
+        XCTAssertEqual(root.packs[built.pack.id]?.owned, [owned])
+        XCTAssertNil(root.packs[built.pack.id]?.reflections[card.id])
+
+        let emptyDir = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: emptyDir) }
+        let onlyBad = emptyDir.appendingPathComponent("x.md")
+        try "nope".write(to: onlyBad, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try PackCatalog.importWorldQuotesMarkdown(fileURLs: [onlyBad], base: emptyDir)) { error in
+            XCTAssertTrue((error as? LocalizedError)?.errorDescription?.contains("x.md") == true)
+        }
+        XCTAssertTrue(PackStorage.loadAllPacks(base: emptyDir).isEmpty)
+    }
+
+    private var detailedMarkdown: String {
+        """
+        ---
+        kind: history
+        source: 架空史
+        note: 任意メモ
+        genre:
+          - 歴史
+        person: 架空の記録者
+        day: 003
+        ---
+
+        ## 格言
+        > 川のそばに都市がある。
+
+        ## 解説
+        長い解説。
+
+        ## 引用
+        短い引用。
+
+        ## 作品の背景
+        架空の時代。
+
+        ## AI分析
+        取り込み分析。
+
+        ## 補足
+        補足の本文。
+        """
+    }
+
+    private func markdown(day: String, text: String) -> String {
+        """
+        ---
+        type: proverb
+        day: \(day)
+        genre:
+          - 試験
+        person: 架空の人
+        ---
+
+        ## 格言
+        > \(text)
+
+        ## 人物の解説と、格言が生まれた背景
+        テスト背景。
+
+        ## Topics（補足）
+        - alpha
+        - beta
+        """
+    }
+}
