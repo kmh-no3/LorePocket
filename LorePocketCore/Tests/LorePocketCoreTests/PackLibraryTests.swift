@@ -112,6 +112,78 @@ final class PackLibraryTests: XCTestCase {
         XCTAssertEqual(WorldQuotesImport.normalizedDay("no-digits"), "000")
     }
 
+    func testDetailedMarkdownKeepsAnalysisSeparateAndNamesFailures() throws {
+        let directory = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let good = directory.appendingPathComponent("003.md")
+        let bad = directory.appendingPathComponent("bad.md")
+        try detailedMarkdown.write(to: good, atomically: true, encoding: .utf8)
+        try "ただのメモ".write(to: bad, atomically: true, encoding: .utf8)
+
+        let built = try WorldQuotesImport.build(fromMarkdownFiles: [good, bad])
+        XCTAssertEqual(built.failures.map(\.fileName), ["bad.md"])
+        XCTAssertTrue(built.failures[0].reason.contains("格言"))
+        let card = try XCTUnwrap(built.pack.cards.first)
+        XCTAssertEqual(card.kind, .history)
+        XCTAssertEqual(card.sourceTitle, "架空史")
+        XCTAssertEqual(card.text, "川のそばに都市がある。")
+        XCTAssertEqual(card.longForm, "長い解説。")
+        XCTAssertTrue(card.sections.contains { $0.heading == "補足" && $0.body == "補足の本文。" })
+        XCTAssertTrue(card.sections.contains { $0.heading == "note" && $0.body == "任意メモ" })
+        XCTAssertEqual(built.analyses[card.id]?.citation, "短い引用。")
+        XCTAssertEqual(built.analyses[card.id]?.workBackground, "架空の時代。")
+        XCTAssertEqual(built.analyses[card.id]?.commentary, "取り込み分析。")
+        XCTAssertNotEqual(card.longForm, built.analyses[card.id]?.commentary)
+
+        var root = ProgressRoot()
+        let owned = OwnedCard(cardId: card.id, variantId: "common", obtainedAt: Date(timeIntervalSince1970: 20))
+        ProgressBook.recordDraw(root: &root, packId: built.pack.id, ownedCard: owned)
+        ProgressBook.setAnalysis(root: &root, packId: built.pack.id, cardId: card.id, analysis: try XCTUnwrap(built.analyses[card.id]))
+        XCTAssertEqual(root.packs[built.pack.id]?.owned, [owned])
+        XCTAssertNil(root.packs[built.pack.id]?.reflections[card.id])
+
+        let emptyDir = try EngineFixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: emptyDir) }
+        let onlyBad = emptyDir.appendingPathComponent("x.md")
+        try "nope".write(to: onlyBad, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try PackCatalog.importWorldQuotesMarkdown(fileURLs: [onlyBad], base: emptyDir)) { error in
+            XCTAssertTrue((error as? LocalizedError)?.errorDescription?.contains("x.md") == true)
+        }
+        XCTAssertTrue(PackStorage.loadAllPacks(base: emptyDir).isEmpty)
+    }
+
+    private var detailedMarkdown: String {
+        """
+        ---
+        kind: history
+        source: 架空史
+        note: 任意メモ
+        genre:
+          - 歴史
+        person: 架空の記録者
+        day: 003
+        ---
+
+        ## 格言
+        > 川のそばに都市がある。
+
+        ## 解説
+        長い解説。
+
+        ## 引用
+        短い引用。
+
+        ## 作品の背景
+        架空の時代。
+
+        ## AI分析
+        取り込み分析。
+
+        ## 補足
+        補足の本文。
+        """
+    }
+
     private func markdown(day: String, text: String) -> String {
         """
         ---

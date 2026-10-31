@@ -78,9 +78,17 @@ private extension PackListView {
         }
         
         do {
-            try library.importWorldQuotesMarkdown(fileURLs: urls)
+            let report = try library.importWorldQuotesMarkdown(fileURLs: urls)
+            for (cardId, analysis) in report.analyses {
+                store.setAnalysis(packId: report.packID, cardId: cardId, analysis: analysis)
+            }
+            if !report.failures.isEmpty {
+                let lines = report.failures.map(\.description)
+                importErrorMessage = (["一部のファイルは取り込めませんでした。"] + lines).joined(separator: "\n")
+            }
         } catch {
-            importErrorMessage = "インポートに失敗しました（Markdown解析/保存）。\nテンプレ形式（frontmatter + 見出し）が一致しているか確認してください。"
+            importErrorMessage = (error as? LocalizedError)?.errorDescription
+                ?? "インポートに失敗しました（Markdown解析/保存）。"
         }
     }
 }

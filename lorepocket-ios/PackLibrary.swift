@@ -18,8 +18,10 @@ final class PackLibrary {
         self.packs = PackCatalog.displayedPacks(imported: imported)
     }
 
-    func importWorldQuotesMarkdown(fileURLs: [URL]) throws {
-        try PackCatalog.importWorldQuotesMarkdown(fileURLs: fileURLs, base: storageBase)
+    @discardableResult
+    func importWorldQuotesMarkdown(fileURLs: [URL]) throws -> PackCatalog.MarkdownImportReport {
+        let report = try PackCatalog.importWorldQuotesMarkdown(fileURLs: fileURLs, base: storageBase)
         reload()
+        return report
     }
 }
