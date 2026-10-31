@@ -24,4 +24,20 @@ enum ProgressBook {
     static func resetAll(root: inout ProgressRoot) {
         root = ProgressRoot()
     }
+
+    static func isFavorite(root: ProgressRoot, packId: String, cardId: String) -> Bool {
+        progress(in: root, packId: packId).favoriteCardIds.contains(cardId)
+    }
+
+    static func setFavorite(root: inout ProgressRoot, packId: String, cardId: String, isFavorite: Bool) {
+        var progress = progress(in: root, packId: packId)
+        if isFavorite {
+            if !progress.favoriteCardIds.contains(cardId) {
+                progress.favoriteCardIds.append(cardId)
+            }
+        } else {
+            progress.favoriteCardIds.removeAll { $0 == cardId }
+        }
+        root.packs[packId] = progress
+    }
 }

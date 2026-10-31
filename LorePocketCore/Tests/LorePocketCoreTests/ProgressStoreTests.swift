@@ -123,6 +123,39 @@ final class ProgressStoreTests: XCTestCase {
         XCTAssertEqual(try ProgressCoding.load(from: url), root)
     }
 
+    func testFavoriteDoesNotDropOwnedCards() throws {
+        var root = ProgressRoot()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let owned = OwnedCard(cardId: "sample-pack-001-001", variantId: "common", obtainedAt: now)
+        let other = OwnedCard(cardId: "other-001", variantId: "foil", obtainedAt: now)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.recordDraw(root: &root, packId: "other", ownedCard: other)
+
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: true)
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: true)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["other"]?.owned, [other])
+        XCTAssertTrue(ProgressBook.isFavorite(root: root, packId: "sample-pack-001", cardId: owned.cardId))
+
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: false)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.drawCount, 1)
+    }
+
+    func testLegacyJSONHasEmptyFavorites() throws {
+        let json = """
+        {"packs":{"sample-pack-001":{"drawCount":1,"owned":[{"cardId":"sample-pack-001-001","variantId":"common","obtainedAt":"2026-01-01T00:00:00Z"}]}}}
+        """.data(using: .utf8)!
+        let root = try ProgressCoding.decode(json)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned.count, 1)
+    }
+
     func testDrawThenRecordBlocksThatDayAndKeepsTheCard() throws {
         let calendar = EngineFixtures.tokyoCalendar()
         let now = EngineFixtures.date(2026, 10, 31, 8, 0, calendar: calendar)

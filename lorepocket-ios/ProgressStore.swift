@@ -36,6 +36,15 @@ final class ProgressStore {
         persist()
     }
 
+    func isFavorite(packId: String, cardId: String) -> Bool {
+        ProgressBook.isFavorite(root: root, packId: packId, cardId: cardId)
+    }
+
+    func setFavorite(packId: String, cardId: String, isFavorite: Bool) {
+        ProgressBook.setFavorite(root: &root, packId: packId, cardId: cardId, isFavorite: isFavorite)
+        persist()
+    }
+
     func resetAll() {
         ProgressBook.resetAll(root: &root)
         writesEnabled = true

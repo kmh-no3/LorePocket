@@ -128,6 +128,7 @@ struct PackProgress: Codable, Hashable {
     var owned: [OwnedCard] = []
     var lastDrawDate: Date? = nil
     var drawCount: Int = 0
+    var favoriteCardIds: [String] = []
 }
 
 struct ProgressRoot: Codable, Hashable {
