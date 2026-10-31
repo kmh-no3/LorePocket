@@ -5,7 +5,7 @@ enum PackStorage {
         case invalidPack
         case cannotRead
     }
-    
+
     static func defaultVariants() -> [Variant] {
         [
             .init(variantId: "common", name: "通常", rarity: "common", weight: 80),
@@ -13,21 +13,26 @@ enum PackStorage {
             .init(variantId: "legend", name: "レジェンド", rarity: "legendary", weight: 2),
         ]
     }
-    
-    static func packsDirectory() throws -> URL {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let dir = docs.appendingPathComponent("packs", isDirectory: true)
+
+    /// 進捗ファイルと同じ Documents 直下。パック本体はここの `packs/` に入る。
+    static func defaultBaseDirectory() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }
+
+    static func packsDirectory(base: URL? = nil) throws -> URL {
+        let root = base ?? defaultBaseDirectory()
+        let dir = root.appendingPathComponent("packs", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
         return dir
     }
-    
-    static func packDirectory(packId: String) throws -> URL {
-        try packsDirectory().appendingPathComponent(packId, isDirectory: true)
+
+    static func packDirectory(packId: String, base: URL? = nil) throws -> URL {
+        try packsDirectory(base: base).appendingPathComponent(packId, isDirectory: true)
     }
-    
-    static func loadAllPacks() -> [Pack] {
+
+    static func loadAllPacks(base: URL? = nil) -> [Pack] {
         do {
-            let dir = try packsDirectory()
+            let dir = try packsDirectory(base: base)
             let urls = try FileManager.default.contentsOfDirectory(
                 at: dir,
                 includingPropertiesForKeys: [.isDirectoryKey],
@@ -40,34 +45,34 @@ enum PackStorage {
             return []
         }
     }
-    
-    static func loadPack(packId: String) throws -> Pack {
-        try loadPack(from: try packDirectory(packId: packId))
+
+    static func loadPack(packId: String, base: URL? = nil) throws -> Pack {
+        try loadPack(from: try packDirectory(packId: packId, base: base))
     }
-    
-    static func savePack(_ pack: Pack) throws {
-        let dir = try packDirectory(packId: pack.id)
+
+    static func savePack(_ pack: Pack, base: URL? = nil) throws {
+        let dir = try packDirectory(packId: pack.id, base: base)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
-        
+
         let metaURL = dir.appendingPathComponent("pack.json")
         let cardsURL = dir.appendingPathComponent("cards.json")
         let variantsURL = dir.appendingPathComponent("variants.json")
-        
+
         try writeJSON(pack.meta, to: metaURL)
         try writeJSON(pack.cards, to: cardsURL)
         try writeJSON(pack.variants, to: variantsURL)
     }
-    
+
     private static func loadPack(from dir: URL) throws -> Pack {
         let metaURL = dir.appendingPathComponent("pack.json")
         let cardsURL = dir.appendingPathComponent("cards.json")
         let variantsURL = dir.appendingPathComponent("variants.json")
-        
+
         let meta: PackMeta = try readJSON(PackMeta.self, from: metaURL)
         let cards: [Card] = try readJSON([Card].self, from: cardsURL)
-        
+
         let variants: [Variant] = (try? readJSON([Variant].self, from: variantsURL)) ?? defaultVariants()
-        
+
         // pack.jsonのcardCountと実体がズレていても、実体を優先する
         let fixedMeta = PackMeta(
             packId: meta.packId,
@@ -79,29 +84,27 @@ enum PackStorage {
             tags: meta.tags,
             legal: meta.legal
         )
-        
+
         return Pack(meta: fixedMeta, cards: cards, variants: variants)
     }
-    
+
     private static func jsonEncoder() -> JSONEncoder {
         let e = JSONEncoder()
         e.outputFormatting = [.prettyPrinted, .sortedKeys]
         return e
     }
-    
+
     private static func jsonDecoder() -> JSONDecoder {
         JSONDecoder()
     }
-    
+
     private static func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
         let data = try jsonEncoder().encode(value)
         try data.write(to: url, options: [.atomic])
     }
-    
+
     private static func readJSON<T: Decodable>(_ type: T.Type, from url: URL) throws -> T {
         let data = try Data(contentsOf: url)
         return try jsonDecoder().decode(T.self, from: data)
     }
 }
-
-
