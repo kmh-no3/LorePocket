@@ -10,7 +10,7 @@
 
 ## テスト
 
-`readingBlocks` の並びは既存の `CardModelTests` が持っている。`swift test --package-path LorePocketCore` を再実行する。
+`swift test --package-path LorePocketCore`：53件成功（2026-10-31、Swift 6.2.1）。`readingBlocks` の並びは既存の `CardModelTests`。今回の画面変更でテストは増やしていない。
 
 Xcode / Simulator は未実行。長い本文の組版は未検証。
 
