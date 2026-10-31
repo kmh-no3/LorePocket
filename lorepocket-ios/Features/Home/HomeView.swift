@@ -6,6 +6,7 @@ struct HomeView: View {
     @Bindable var library: PackLibrary
     var onOpenPacks: () -> Void
 
+    @State private var selectedPackID: String?
     @State private var drawResult: DrawEngine.DrawResult?
     @State private var isDrawing = false
     @State private var drawErrorMessage: String?
@@ -14,8 +15,13 @@ struct HomeView: View {
         Group {
             if library.packs.isEmpty {
                 emptyState
-            } else if let pack = featuredPack {
+            } else if let pack = selectedPack {
                 featured(pack)
+            }
+        }
+        .onChange(of: library.packs.map(\.id)) {
+            if let selectedPackID, !library.packs.contains(where: { $0.id == selectedPackID }) {
+                self.selectedPackID = nil
             }
         }
         .navigationTitle("今日のドロー")
@@ -39,6 +45,20 @@ struct HomeView: View {
         HomePackSelection.featured(in: library.packs) { store.canDrawToday(packId: $0) }
     }
 
+    private var selectedPack: Pack? {
+        if let selectedPackID, let pack = library.packs.first(where: { $0.id == selectedPackID }) {
+            return pack
+        }
+        return featuredPack
+    }
+
+    private var selection: Binding<String?> {
+        Binding(
+            get: { selectedPackID ?? featuredPack?.id },
+            set: { selectedPackID = $0 }
+        )
+    }
+
     private var emptyState: some View {
         ContentUnavailableView {
             Label("パックがありません", systemImage: "square.stack.3d.up")
@@ -56,14 +76,17 @@ struct HomeView: View {
         let canDraw = store.canDrawToday(packId: pack.id)
 
         return GeometryReader { proxy in
-            let width = min(proxy.size.width - 56, 420)
-            let height = min(width * 1.2, max(180, proxy.size.height * 0.5))
-            VStack(spacing: 18) {
+            let width = CGFloat(CarouselMetrics.cardWidth(containerWidth: proxy.size.width))
+            VStack(spacing: 16) {
                 Spacer(minLength: 4)
-                PackCoverView(pack: pack)
-                    .frame(width: width, height: height)
+                PackCarouselView(
+                    packs: library.packs,
+                    selection: selection,
+                    canDraw: { store.canDrawToday(packId: $0.id) }
+                )
+                .frame(height: min(max(220, proxy.size.height * 0.52), 460))
                 status(pack: pack, stats: stats, progress: progress, canDraw: canDraw)
-                    .frame(maxWidth: width)
+                    .frame(maxWidth: min(width, proxy.size.width - 40))
                 Spacer(minLength: 4)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
