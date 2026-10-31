@@ -89,12 +89,10 @@ struct CardDetailView: View {
                 }
             }
             
-            Section("本文") {
-                Text(card.text)
-            }
-            
             Section("人物") {
                 Text(card.person)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             
             if !card.genre.isEmpty {
@@ -103,10 +101,15 @@ struct CardDetailView: View {
                         .padding(.vertical, 4)
                 }
             }
-            
-            if !card.background.isEmpty {
-                Section("背景") {
-                    Text(card.background)
+
+            ForEach(card.readingBlocks) { block in
+                Section(block.title) {
+                    Text(block.body)
+                        .font(block.id == "text" ? .title3.weight(.semibold) : .body)
+                        .lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
                 }
             }
             
