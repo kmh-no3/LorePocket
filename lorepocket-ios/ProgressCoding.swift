@@ -49,6 +49,7 @@ private struct WirePackProgress: Decodable {
     var lastDrawDate: Date?
     var drawCount: Int?
     var favoriteCardIds: [String]?
+    var reflections: [String: CardReflection]?
 
     func makeProgress() -> PackProgress {
         var progress = PackProgress()
@@ -56,6 +57,7 @@ private struct WirePackProgress: Decodable {
         progress.lastDrawDate = lastDrawDate
         progress.drawCount = drawCount ?? 0
         progress.favoriteCardIds = favoriteCardIds ?? []
+        progress.reflections = reflections ?? [:]
         return progress
     }
 }
