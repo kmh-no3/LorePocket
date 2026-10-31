@@ -563,7 +563,9 @@ struct CollectionView: View {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(vm.filteredItems) { item in
                         NavigationLink(value: item) {
-                            CardThumbnailView(item: item)
+                            CardThumbnailView(item: item) {
+                                viewModel.toggleFavorite(cardId: item.cardId)
+                            }
                         }
                         .buttonStyle(.plain)
                     }
@@ -589,18 +591,24 @@ struct CardDetailView: View {
     let card: Card
     let pack: Pack
     let owned: [OwnedCard]
+    var store: ProgressStore?
 
     init(cardId: String, pack: Pack, store: ProgressStore) {
         let card = pack.cards.first(where: { $0.id == cardId })
             ?? pack.cards.first!
         let owned = store.progress(for: pack.id).owned.filter { $0.cardId == cardId }
-        self.init(card: card, pack: pack, owned: owned)
+        self.init(card: card, pack: pack, owned: owned, store: store)
     }
 
-    init(card: Card, pack: Pack, owned: [OwnedCard]) {
+    init(card: Card, pack: Pack, owned: [OwnedCard], store: ProgressStore? = nil) {
         self.card = card
         self.pack = pack
         self.owned = owned
+        self.store = store
+    }
+
+    private var isFavorite: Bool {
+        store?.isFavorite(packId: pack.id, cardId: card.id) ?? false
     }
 
     @State private var selectedVariantId: String? = nil
@@ -721,6 +729,18 @@ struct CardDetailView: View {
         }
         .navigationTitle("詳細")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if store != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        store?.setFavorite(packId: pack.id, cardId: card.id, isFavorite: !isFavorite)
+                    } label: {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart")
+                    }
+                    .accessibilityLabel(isFavorite ? "お気に入りを外す" : "お気に入りにする")
+                }
+            }
+        }
         .alert("コピーしました", isPresented: $copiedToast) {
             Button("OK", role: .cancel) { copiedToast = false }
         }

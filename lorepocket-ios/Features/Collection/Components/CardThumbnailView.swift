@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CardThumbnailView: View {
     let item: CardListItem
+    var onToggleFavorite: (() -> Void)? = nil
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -36,6 +37,30 @@ struct CardThumbnailView: View {
                 }
             }
             .padding(10)
+
+            if item.isOwned && (item.isFavorite || onToggleFavorite != nil) {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Image(systemName: item.isFavorite ? "heart.fill" : "heart")
+                            .foregroundStyle(item.isFavorite ? Color.pink : Color.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .accessibilityHidden(true)
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if item.isOwned, let onToggleFavorite {
+                Button(action: onToggleFavorite) {
+                    Color.clear
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(item.isFavorite ? "お気に入りを外す" : "お気に入りにする")
+            }
         }
     }
 }

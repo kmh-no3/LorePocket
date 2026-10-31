@@ -48,12 +48,14 @@ private struct WirePackProgress: Decodable {
     var owned: [OwnedCard]?
     var lastDrawDate: Date?
     var drawCount: Int?
+    var favoriteCardIds: [String]?
 
     func makeProgress() -> PackProgress {
         var progress = PackProgress()
         progress.owned = owned ?? []
         progress.lastDrawDate = lastDrawDate
         progress.drawCount = drawCount ?? 0
+        progress.favoriteCardIds = favoriteCardIds ?? []
         return progress
     }
 }
