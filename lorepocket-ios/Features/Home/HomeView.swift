@@ -7,9 +7,8 @@ struct HomeView: View {
     var onOpenPacks: () -> Void
 
     @State private var selectedPackID: String?
+    @State private var openingPack: Pack?
     @State private var drawResult: DrawEngine.DrawResult?
-    @State private var isDrawing = false
-    @State private var drawErrorMessage: String?
 
     var body: some View {
         Group {
@@ -26,18 +25,13 @@ struct HomeView: View {
         }
         .navigationTitle("今日のドロー")
         .navigationBarTitleDisplayMode(.inline)
+        .drawOpening(pack: $openingPack, store: store) { _, result in
+            drawResult = result
+        }
         .sheet(item: $drawResult) { result in
             if let pack = pack(for: result) {
                 DrawResultView(pack: pack, result: result, store: store)
             }
-        }
-        .alert("ドローできませんでした", isPresented: Binding(
-            get: { drawErrorMessage != nil },
-            set: { if !$0 { drawErrorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { drawErrorMessage = nil }
-        } message: {
-            Text(drawErrorMessage ?? "")
         }
     }
 
@@ -122,22 +116,15 @@ struct HomeView: View {
     private func actions(pack: Pack, canDraw: Bool) -> some View {
         VStack(spacing: 10) {
             Button {
-                commitDraw(pack)
+                openingPack = pack
             } label: {
-                Group {
-                    if isDrawing {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        Label(canDraw ? "引く（1日1回）" : "明日また", systemImage: canDraw ? "sparkles" : "clock")
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .font(.headline)
-                .padding(.vertical, 6)
+                Label(canDraw ? "引く（1日1回）" : "明日また", systemImage: canDraw ? "sparkles" : "clock")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!canDraw || isDrawing)
+            .disabled(!canDraw || openingPack != nil)
             .accessibilityLabel(canDraw ? "\(pack.meta.title) を引く" : "\(pack.meta.title) は今日は引けません")
 
             NavigationLink {
@@ -152,27 +139,6 @@ struct HomeView: View {
         .padding(.top, 12)
         .padding(.bottom, 8)
         .background(.bar)
-    }
-
-    private func commitDraw(_ pack: Pack) {
-        guard !isDrawing else { return }
-        isDrawing = true
-        let progress = store.progress(for: pack.id)
-        let canDraw = store.canDrawToday(packId: pack.id)
-        var session = DrawSession()
-        var rng = SystemRandomNumberGenerator()
-        let outcome = session.handle(.skip, canDraw: canDraw, reduceMotion: true) {
-            try DrawEngine.draw(pack: pack, progress: progress, now: Date(), rng: &rng)
-        }
-        if outcome.shouldPersist, let result = outcome.result {
-            store.recordDraw(packId: pack.id, ownedCard: result.ownedCard)
-            drawResult = result
-        } else if let failure = outcome.failure {
-            drawErrorMessage = failure == .emptyCards
-                ? "ドローできませんでした（カードが空です）。"
-                : "ドローできませんでした（バリアントが空です）。"
-        }
-        isDrawing = false
     }
 
     private func pack(for result: DrawEngine.DrawResult) -> Pack? {
