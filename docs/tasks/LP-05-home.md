@@ -10,7 +10,7 @@
 
 ## テスト
 
-`swift test --package-path LorePocketCore`。ホームの選び方3件を追加。
+`swift test --package-path LorePocketCore`：45件成功（2026-10-31、Swift 6.2.1）。ホームの選び方3件を追加し、既存42件も通った。
 
 Xcode / Simulator は未実行。レイアウト、片手での押しやすさ、ライトとダークの見た目は未検証。
 
