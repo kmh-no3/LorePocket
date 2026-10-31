@@ -55,4 +55,18 @@ enum ProgressBook {
         }
         root.packs[packId] = progress
     }
+
+    static func analysis(in root: ProgressRoot, packId: String, cardId: String) -> CardAnalysis? {
+        progress(in: root, packId: packId).analyses[cardId]
+    }
+
+    static func setAnalysis(root: inout ProgressRoot, packId: String, cardId: String, analysis: CardAnalysis) {
+        var progress = progress(in: root, packId: packId)
+        if analysis.isEmpty {
+            progress.analyses.removeValue(forKey: cardId)
+        } else {
+            progress.analyses[cardId] = analysis
+        }
+        root.packs[packId] = progress
+    }
 }

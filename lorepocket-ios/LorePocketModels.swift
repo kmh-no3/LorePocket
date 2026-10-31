@@ -121,6 +121,20 @@ struct CardReflection: Codable, Hashable {
     var updatedAt: Date
 }
 
+/// 取り込み済みの引用・背景・分析。本人の考察とは保存先を分ける。
+struct CardAnalysis: Codable, Hashable {
+    var citation: String?
+    var workBackground: String?
+    var commentary: String?
+    var updatedAt: Date?
+
+    var isEmpty: Bool {
+        [citation, workBackground, commentary].allSatisfy { value in
+            value?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+        }
+    }
+}
+
 struct OwnedCard: Codable, Hashable, Identifiable {
     let cardId: String
     let variantId: String
@@ -135,6 +149,7 @@ struct PackProgress: Codable, Hashable {
     var drawCount: Int = 0
     var favoriteCardIds: [String] = []
     var reflections: [String: CardReflection] = [:]
+    var analyses: [String: CardAnalysis] = [:]
 }
 
 struct ProgressRoot: Codable, Hashable {

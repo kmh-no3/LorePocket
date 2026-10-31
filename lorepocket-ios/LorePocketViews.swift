@@ -615,6 +615,17 @@ struct CardDetailView: View {
         store?.setReflection(packId: pack.id, cardId: card.id, body: reflectionDraft)
     }
 
+    @ViewBuilder
+    private func analysisBlock(title: String, body: String?) -> some View {
+        if let body, !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(body)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     @State private var selectedVariantId: String? = nil
     @State private var copiedToast = false
     @State private var reflectionDraft = ""
@@ -692,6 +703,19 @@ struct CardDetailView: View {
                 }
             }
             
+            if let analysis = store?.analysis(packId: pack.id, cardId: card.id), !analysis.isEmpty {
+                Section {
+                    analysisBlock(title: "引用", body: analysis.citation)
+                    analysisBlock(title: "作品の背景", body: analysis.workBackground)
+                    analysisBlock(title: "AI分析", body: analysis.commentary)
+                    Text("外部のAIには接続していません。表示しているのは取り込み済みの文章です。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("取り込み分析")
+                }
+            }
+
             if store != nil {
                 Section("考察") {
                     TextEditor(text: $reflectionDraft)
