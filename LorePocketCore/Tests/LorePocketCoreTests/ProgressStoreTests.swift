@@ -176,6 +176,38 @@ final class ProgressStoreTests: XCTestCase {
         XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
     }
 
+    func testAnalysisDoesNotOverwriteReflectionOrOwnedCards() throws {
+        var root = ProgressRoot()
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let owned = OwnedCard(cardId: "sample-pack-001-008", variantId: "common", obtainedAt: now)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.setReflection(root: &root, packId: "sample-pack-001", cardId: owned.cardId, body: "本人の言葉", now: now)
+        let analysis = CardAnalysis(
+            citation: "短い引用。",
+            workBackground: "架空の作品背景。",
+            commentary: "取り込み済みの分析文。",
+            updatedAt: now
+        )
+        ProgressBook.setAnalysis(root: &root, packId: "sample-pack-001", cardId: owned.cardId, analysis: analysis)
+
+        XCTAssertEqual(root.packs["sample-pack-001"]?.reflections[owned.cardId]?.body, "本人の言葉")
+        XCTAssertEqual(root.packs["sample-pack-001"]?.analyses[owned.cardId], analysis)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+
+        ProgressBook.setAnalysis(
+            root: &root,
+            packId: "sample-pack-001",
+            cardId: owned.cardId,
+            analysis: CardAnalysis(citation: "  ", workBackground: nil, commentary: nil, updatedAt: now)
+        )
+        XCTAssertNil(root.packs["sample-pack-001"]?.analyses[owned.cardId])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.reflections[owned.cardId]?.body, "本人の言葉")
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+    }
+
     func testLegacyJSONHasEmptyFavorites() throws {
         let json = """
         {"packs":{"sample-pack-001":{"drawCount":1,"owned":[{"cardId":"sample-pack-001-001","variantId":"common","obtainedAt":"2026-01-01T00:00:00Z"}]}}}
@@ -183,6 +215,7 @@ final class ProgressStoreTests: XCTestCase {
         let root = try ProgressCoding.decode(json)
         XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [])
         XCTAssertEqual(root.packs["sample-pack-001"]?.reflections, [:])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.analyses, [:])
         XCTAssertEqual(root.packs["sample-pack-001"]?.owned.count, 1)
     }
 

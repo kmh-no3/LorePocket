@@ -54,6 +54,15 @@ final class ProgressStore {
         persist()
     }
 
+    func analysis(packId: String, cardId: String) -> CardAnalysis? {
+        ProgressBook.analysis(in: root, packId: packId, cardId: cardId)
+    }
+
+    func setAnalysis(packId: String, cardId: String, analysis: CardAnalysis) {
+        ProgressBook.setAnalysis(root: &root, packId: packId, cardId: cardId, analysis: analysis)
+        persist()
+    }
+
     func resetAll() {
         ProgressBook.resetAll(root: &root)
         writesEnabled = true
