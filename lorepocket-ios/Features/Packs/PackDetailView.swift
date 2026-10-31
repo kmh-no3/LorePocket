@@ -7,9 +7,8 @@ struct PackDetailView: View {
     @Bindable var store: ProgressStore
     
     @State private var showBlockedAlert = false
-    @State private var drawErrorMessage: String? = nil
+    @State private var openingPack: Pack?
     @State private var drawResult: DrawEngine.DrawResult? = nil
-    @State private var isDrawing = false
     
     var body: some View {
         let progress = store.progress(for: pack.id)
@@ -20,7 +19,7 @@ struct PackDetailView: View {
             packHeroSection(stats: stats, canDrawToday: canDrawToday)
             overviewSection()
             statusSection(progress: progress, stats: stats, canDrawToday: canDrawToday)
-            actionsSection(progress: progress, canDrawToday: canDrawToday)
+            actionsSection(canDrawToday: canDrawToday)
             variantOddsSection()
         }
         .navigationTitle(pack.meta.title)
@@ -30,10 +29,8 @@ struct PackDetailView: View {
         } message: {
             Text("明日また来てね。")
         }
-        .alert("ドローエラー", isPresented: Binding(get: { drawErrorMessage != nil }, set: { if !$0 { drawErrorMessage = nil } })) {
-            Button("OK", role: .cancel) { drawErrorMessage = nil }
-        } message: {
-            Text(drawErrorMessage ?? "")
+        .drawOpening(pack: $openingPack, store: store) { _, result in
+            drawResult = result
         }
         .sheet(item: $drawResult) { result in
             DrawResultView(pack: pack, result: result, store: store)
@@ -172,39 +169,18 @@ private extension PackDetailView {
     }
 
     @ViewBuilder
-    func actionsSection(progress: PackProgress, canDrawToday: Bool) -> some View {
+    func actionsSection(canDrawToday: Bool) -> some View {
         Section("操作") {
             Button {
                 if !canDrawToday {
                     showBlockedAlert = true
                     return
                 }
-                Task { @MainActor in
-                    guard !isDrawing else { return }
-                    isDrawing = true
-                    // ちょい演出：すぐ結果を出すと味気ないので短い待ち
-                    try? await Task.sleep(nanoseconds: 350_000_000)
-                    var rng = SystemRandomNumberGenerator()
-                    do {
-                        let result = try DrawEngine.draw(pack: pack, progress: progress, now: Date(), rng: &rng)
-                        store.recordDraw(packId: pack.id, ownedCard: result.ownedCard)
-                        drawResult = result
-                    } catch {
-                        drawErrorMessage = "ドローできませんでした（パックのカード/バリアントが空です）。"
-                    }
-                    isDrawing = false
-                }
+                openingPack = pack
             } label: {
-                if isDrawing {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Draw中…")
-                    }
-                } else {
-                    Label("Draw（1日1回）", systemImage: "sparkles")
-                }
+                Label("Draw（1日1回）", systemImage: "sparkles")
             }
-            .disabled(isDrawing)
+            .disabled(openingPack != nil)
 
             NavigationLink {
                 CollectionView(pack: pack, store: store)
