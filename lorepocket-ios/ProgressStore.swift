@@ -45,6 +45,15 @@ final class ProgressStore {
         persist()
     }
 
+    func reflection(packId: String, cardId: String) -> CardReflection? {
+        ProgressBook.reflection(in: root, packId: packId, cardId: cardId)
+    }
+
+    func setReflection(packId: String, cardId: String, body: String, now: Date = Date()) {
+        ProgressBook.setReflection(root: &root, packId: packId, cardId: cardId, body: body, now: now)
+        persist()
+    }
+
     func resetAll() {
         ProgressBook.resetAll(root: &root)
         writesEnabled = true

@@ -147,12 +147,42 @@ final class ProgressStoreTests: XCTestCase {
         XCTAssertEqual(root.packs["sample-pack-001"]?.drawCount, 1)
     }
 
+    func testReflectionKeepsOwnedCardsAndFavorites() throws {
+        var root = ProgressRoot()
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let owned = OwnedCard(cardId: "sample-pack-001-003", variantId: "foil", obtainedAt: now)
+        ProgressBook.recordDraw(root: &root, packId: "sample-pack-001", ownedCard: owned)
+        ProgressBook.setFavorite(root: &root, packId: "sample-pack-001", cardId: owned.cardId, isFavorite: true)
+        ProgressBook.setReflection(
+            root: &root,
+            packId: "sample-pack-001",
+            cardId: owned.cardId,
+            body: "  自分のメモ。\n次の行。  ",
+            now: now
+        )
+
+        let note = root.packs["sample-pack-001"]?.reflections[owned.cardId]
+        XCTAssertEqual(note?.body, "自分のメモ。\n次の行。")
+        XCTAssertEqual(note?.updatedAt, now)
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
+
+        let decoded = try ProgressCoding.decode(try ProgressCoding.encode(root))
+        XCTAssertEqual(decoded, root)
+
+        ProgressBook.setReflection(root: &root, packId: "sample-pack-001", cardId: owned.cardId, body: "   ", now: now)
+        XCTAssertNil(root.packs["sample-pack-001"]?.reflections[owned.cardId])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.owned, [owned])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [owned.cardId])
+    }
+
     func testLegacyJSONHasEmptyFavorites() throws {
         let json = """
         {"packs":{"sample-pack-001":{"drawCount":1,"owned":[{"cardId":"sample-pack-001-001","variantId":"common","obtainedAt":"2026-01-01T00:00:00Z"}]}}}
         """.data(using: .utf8)!
         let root = try ProgressCoding.decode(json)
         XCTAssertEqual(root.packs["sample-pack-001"]?.favoriteCardIds, [])
+        XCTAssertEqual(root.packs["sample-pack-001"]?.reflections, [:])
         XCTAssertEqual(root.packs["sample-pack-001"]?.owned.count, 1)
     }
 

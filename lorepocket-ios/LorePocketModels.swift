@@ -116,6 +116,11 @@ struct Variant: Codable, Hashable, Identifiable {
     var id: String { variantId }
 }
 
+struct CardReflection: Codable, Hashable {
+    var body: String
+    var updatedAt: Date
+}
+
 struct OwnedCard: Codable, Hashable, Identifiable {
     let cardId: String
     let variantId: String
@@ -129,6 +134,7 @@ struct PackProgress: Codable, Hashable {
     var lastDrawDate: Date? = nil
     var drawCount: Int = 0
     var favoriteCardIds: [String] = []
+    var reflections: [String: CardReflection] = [:]
 }
 
 struct ProgressRoot: Codable, Hashable {

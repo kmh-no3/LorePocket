@@ -40,4 +40,19 @@ enum ProgressBook {
         }
         root.packs[packId] = progress
     }
+
+    static func reflection(in root: ProgressRoot, packId: String, cardId: String) -> CardReflection? {
+        progress(in: root, packId: packId).reflections[cardId]
+    }
+
+    static func setReflection(root: inout ProgressRoot, packId: String, cardId: String, body: String, now: Date) {
+        var progress = progress(in: root, packId: packId)
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            progress.reflections.removeValue(forKey: cardId)
+        } else {
+            progress.reflections[cardId] = CardReflection(body: trimmed, updatedAt: now)
+        }
+        root.packs[packId] = progress
+    }
 }

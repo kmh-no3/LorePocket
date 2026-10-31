@@ -611,8 +611,14 @@ struct CardDetailView: View {
         store?.isFavorite(packId: pack.id, cardId: card.id) ?? false
     }
 
+    private func saveReflection() {
+        store?.setReflection(packId: pack.id, cardId: card.id, body: reflectionDraft)
+    }
+
     @State private var selectedVariantId: String? = nil
     @State private var copiedToast = false
+    @State private var reflectionDraft = ""
+    @State private var reflectionReady = false
 
     private var ownedVariantIds: [String] {
         Array(Set(owned.map(\.variantId))).sorted()
@@ -686,6 +692,18 @@ struct CardDetailView: View {
                 }
             }
             
+            if store != nil {
+                Section("考察") {
+                    TextEditor(text: $reflectionDraft)
+                        .frame(minHeight: 160)
+                        .accessibilityLabel("自分の考察")
+                    Button("考察を保存") {
+                        saveReflection()
+                    }
+                    .disabled(!reflectionReady)
+                }
+            }
+
             Section("所持バリアント") {
                 if ownedVariantIds.isEmpty {
                     Text("未所持")
@@ -747,6 +765,15 @@ struct CardDetailView: View {
         .onAppear {
             if selectedVariantId == nil {
                 selectedVariantId = ownedVariantIds.first
+            }
+            if !reflectionReady {
+                reflectionDraft = store?.reflection(packId: pack.id, cardId: card.id)?.body ?? ""
+                reflectionReady = store != nil
+            }
+        }
+        .onDisappear {
+            if reflectionReady {
+                saveReflection()
             }
         }
     }
