@@ -11,7 +11,7 @@
 
 ## テスト
 
-`swift test --package-path LorePocketCore`。絞り込み、検索、列数を追加する。
+`swift test --package-path LorePocketCore`：53件成功（2026-10-31、Swift 6.2.1）。絞り込み、検索、列数の4件を追加し、既存49件も通った。
 
 Xcode / Simulator は未実行。列の見た目とセグメントの操作は未検証。
 
