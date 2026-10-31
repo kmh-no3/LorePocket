@@ -45,8 +45,43 @@ struct CardDetailView: View {
     @State private var reflectionDraft = ""
     @State private var reflectionReady = false
 
-    private var ownedVariantIds: [String] {
-        Array(Set(owned.map(\.variantId))).sorted()
+    private var ownedVariantIds: Set<String> {
+        Set(owned.map(\.variantId))
+    }
+
+    private var firstOwnedVariantId: String? {
+        pack.variants.first { ownedVariantIds.contains($0.variantId) }?.variantId
+    }
+
+    private func variantChip(_ variant: Variant) -> some View {
+        let owned = ownedVariantIds.contains(variant.variantId)
+        let selected = owned && (selectedVariantId ?? firstOwnedVariantId) == variant.variantId
+        return Button {
+            selectedVariantId = VariantSelection.choose(
+                current: selectedVariantId ?? firstOwnedVariantId,
+                requested: variant.variantId,
+                ownedIds: ownedVariantIds
+            )
+        } label: {
+            HStack(spacing: 4) {
+                if !owned {
+                    Image(systemName: "lock.fill")
+                        .font(.caption2)
+                }
+                Text(variant.name)
+            }
+            .font(.subheadline.weight(selected ? .semibold : .regular))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .foregroundStyle(owned ? Color.primary : Color.secondary)
+            .background(
+                Capsule().fill(selected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!owned)
+        .accessibilityLabel(owned ? variant.name : "\(variant.name)、未所持")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
     
     var body: some View {
@@ -57,7 +92,7 @@ struct CardDetailView: View {
                        let v = pack.variants.first(where: { $0.variantId == vid }) {
                         return v
                     }
-                    if let first = ownedVariantIds.first,
+                    if let first = firstOwnedVariantId,
                        let v = pack.variants.first(where: { $0.variantId == first }) {
                         return v
                     }
@@ -145,44 +180,30 @@ struct CardDetailView: View {
                 }
             }
             
-            Section("所持バリアント") {
+            Section("バリアント") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(pack.variants) { variant in
+                            variantChip(variant)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .accessibilityLabel("バリアント")
+
                 if ownedVariantIds.isEmpty {
                     Text("未所持")
                         .foregroundStyle(.secondary)
-                } else {
-                    if ownedVariantIds.count >= 2 {
-                        Picker("表示中", selection: Binding(
-                            get: { selectedVariantId ?? ownedVariantIds.first! },
-                            set: { selectedVariantId = $0 }
-                        )) {
-                            ForEach(ownedVariantIds, id: \.self) { vid in
-                                Text(vid).tag(vid)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                } else if let variantId = selectedVariantId ?? firstOwnedVariantId,
+                          let variant = pack.variants.first(where: { $0.variantId == variantId }),
+                          let obtainedAt = owned.first(where: { $0.variantId == variantId })?.obtainedAt {
+                    HStack {
+                        Text(variant.rarity)
+                        Spacer()
+                        Text(obtainedAt, style: .date)
                     }
-                    
-                    ForEach(ownedVariantIds, id: \.self) { variantId in
-                        if let v = pack.variants.first(where: { $0.variantId == variantId }) {
-                            let obtainedAt = owned.first(where: { $0.variantId == variantId })?.obtainedAt
-                            HStack {
-                                VariantBadge(variant: v)
-                                Spacer()
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    Text(v.rarity)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    if let date = obtainedAt {
-                                        Text(date, style: .date)
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        } else {
-                            Text(variantId)
-                        }
-                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
             }
         }
@@ -205,7 +226,7 @@ struct CardDetailView: View {
         }
         .onAppear {
             if selectedVariantId == nil {
-                selectedVariantId = ownedVariantIds.first
+                selectedVariantId = firstOwnedVariantId
             }
             if !reflectionReady {
                 reflectionDraft = store?.reflection(packId: pack.id, cardId: card.id)?.body ?? ""
