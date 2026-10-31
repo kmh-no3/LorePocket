@@ -1,0 +1,1 @@
+../../../lorepocket-ios/CollectionQuery.swift

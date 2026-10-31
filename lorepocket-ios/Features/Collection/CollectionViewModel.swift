@@ -9,6 +9,7 @@ final class CollectionViewModel {
 
     var query: String = ""
     var sort: SortOption = .obtainedDesc
+    var ownership: CollectionOwnership = .all
 
     private(set) var items: [CardListItem] = []
 
@@ -32,14 +33,10 @@ final class CollectionViewModel {
     var ownedCount: Int { stats.ownedUniqueCards }
 
     var filteredItems: [CardListItem] {
-        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return sortedItems
-        }
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return sortedItems.filter { item in
-            item.title.localizedCaseInsensitiveContains(q) ||
-            item.subtitle.localizedCaseInsensitiveContains(q) ||
-            (item.isOwned && pack.cards.first(where: { $0.id == item.cardId })?.text.localizedCaseInsensitiveContains(q) == true)
+        sortedItems.filter { item in
+            guard CollectionQuery.includes(isOwned: item.isOwned, ownership: ownership) else { return false }
+            guard let card = pack.cards.first(where: { $0.id == item.cardId }) else { return false }
+            return CollectionQuery.matches(card: card, isOwned: item.isOwned, query: query)
         }
     }
 

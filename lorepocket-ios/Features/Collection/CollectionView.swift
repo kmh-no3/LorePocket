@@ -6,10 +6,6 @@ struct CollectionView: View {
     @Bindable var store: ProgressStore
     @State private var viewModel: CollectionViewModel
 
-    private var columns: [GridItem] {
-        [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-    }
-
     init(pack: Pack, store: ProgressStore) {
         self.pack = pack
         self.store = store
@@ -31,31 +27,50 @@ struct CollectionView: View {
             }
             .padding(.horizontal)
 
+            Picker("表示", selection: $vm.ownership) {
+                Text("すべて").tag(CollectionOwnership.all)
+                Text("所持").tag(CollectionOwnership.owned)
+                Text("未所持").tag(CollectionOwnership.unowned)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .accessibilityLabel("所持で絞り込む")
+
             HStack {
                 TextField("検索", text: $vm.query)
                     .textFieldStyle(.roundedBorder)
 
-                Picker("", selection: $vm.sort) {
+                Picker("並び", selection: $vm.sort) {
                     ForEach(CollectionViewModel.SortOption.allCases) { opt in
                         Text(opt.rawValue).tag(opt)
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityLabel("並び順")
             }
             .padding(.horizontal)
 
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(vm.filteredItems) { item in
-                        NavigationLink(value: item) {
-                            CardThumbnailView(item: item) {
-                                viewModel.toggleFavorite(cardId: item.cardId)
+            GeometryReader { proxy in
+                let count = CollectionQuery.columnCount(containerWidth: proxy.size.width)
+                let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: count)
+                ScrollView {
+                    if vm.filteredItems.isEmpty {
+                        ContentUnavailableView("該当するカードがありません", systemImage: "magnifyingglass")
+                            .padding(.top, 32)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(vm.filteredItems) { item in
+                                NavigationLink(value: item) {
+                                    CardThumbnailView(item: item) {
+                                        viewModel.toggleFavorite(cardId: item.cardId)
+                                    }
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .buttonStyle(.plain)
+                        .padding()
                     }
                 }
-                .padding()
             }
         }
         .navigationTitle("コレクション")
