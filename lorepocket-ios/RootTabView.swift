@@ -6,15 +6,26 @@ struct RootTabView: View {
     @Bindable var library: PackLibrary
     
     enum Tab: Hashable {
+        case home
         case packs
         case collection
         case settings
     }
     
-    @State private var tab: Tab = .packs
+    @State private var tab: Tab = .home
     
     var body: some View {
         TabView(selection: $tab) {
+            NavigationStack {
+                HomeView(store: store, library: library) {
+                    tab = .packs
+                }
+            }
+            .tabItem {
+                Label("ホーム", systemImage: "house.fill")
+            }
+            .tag(Tab.home)
+
             NavigationStack {
                 PackListView(store: store, library: library)
             }
