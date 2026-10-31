@@ -69,7 +69,7 @@ enum PackStorage {
         let variantsURL = dir.appendingPathComponent("variants.json")
 
         let meta: PackMeta = try readJSON(PackMeta.self, from: metaURL)
-        let cards: [Card] = try readJSON([Card].self, from: cardsURL)
+        let cards: [Card] = try CardCoding.decodeCards(from: cardsURL)
 
         let variants: [Variant] = (try? readJSON([Variant].self, from: variantsURL)) ?? defaultVariants()
 
