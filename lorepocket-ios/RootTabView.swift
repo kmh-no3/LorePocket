@@ -50,5 +50,8 @@ struct RootTabView: View {
             }
             .tag(Tab.settings)
         }
+        .environment(\.returnHome) {
+            tab = .home
+        }
     }
 }

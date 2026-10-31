@@ -6,6 +6,8 @@ import UIKit
 struct CardView: View {
     let card: Card
     let variant: Variant
+    var emphasize: Bool = false
+    var quoteLineLimit: Int? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -20,17 +22,18 @@ struct CardView: View {
             }
             
             Text("“\(card.text)”")
-                .font(.title3.weight(.semibold))
+                .font((emphasize ? Font.title2 : Font.title3).weight(.semibold))
                 .lineSpacing(4)
+                .lineLimit(quoteLineLimit)
                 .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
+                .fixedSize(horizontal: false, vertical: quoteLineLimit == nil)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             Text(card.person)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding(16)
+        .padding(emphasize ? 22 : 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(cardBackground(variant: variant))
