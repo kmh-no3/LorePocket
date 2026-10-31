@@ -26,6 +26,29 @@ struct PackMeta: Codable, Hashable, Identifiable {
     var id: String { packId }
 }
 
+enum CardKind: String, Codable, CaseIterable, Hashable {
+    case proverb
+    case book
+    case manga
+    case novel
+    case history
+    case person
+    case knowledge
+    case other
+}
+
+struct CardSection: Codable, Hashable, Identifiable {
+    var id: String
+    var heading: String
+    var body: String
+}
+
+struct ReadingBlock: Hashable, Identifiable {
+    var id: String
+    var title: String
+    var body: String
+}
+
 struct Card: Codable, Hashable, Identifiable {
     let id: String
     let genre: [String]
@@ -33,6 +56,55 @@ struct Card: Codable, Hashable, Identifiable {
     let person: String
     let background: String
     let topics: [String]
+    var kind: CardKind
+    var sourceTitle: String?
+    var longForm: String?
+    var sections: [CardSection]
+
+    init(
+        id: String,
+        genre: [String],
+        text: String,
+        person: String,
+        background: String,
+        topics: [String],
+        kind: CardKind = .proverb,
+        sourceTitle: String? = nil,
+        longForm: String? = nil,
+        sections: [CardSection] = []
+    ) {
+        self.id = id
+        self.genre = genre
+        self.text = text
+        self.person = person
+        self.background = background
+        self.topics = topics
+        self.kind = kind
+        self.sourceTitle = sourceTitle
+        self.longForm = longForm
+        self.sections = sections
+    }
+
+    /// 詳細画面がそのまま並べられる階層。旧カードは格言・背景・Topicsだけになる。
+    var readingBlocks: [ReadingBlock] {
+        var blocks: [ReadingBlock] = []
+        if !text.isEmpty {
+            blocks.append(ReadingBlock(id: "text", title: "格言", body: text))
+        }
+        if let sourceTitle, !sourceTitle.isEmpty {
+            blocks.append(ReadingBlock(id: "source", title: "作品", body: sourceTitle))
+        }
+        if !background.isEmpty {
+            blocks.append(ReadingBlock(id: "background", title: "背景", body: background))
+        }
+        if let longForm, !longForm.isEmpty {
+            blocks.append(ReadingBlock(id: "longForm", title: "解説", body: longForm))
+        }
+        for section in sections where !section.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            blocks.append(ReadingBlock(id: "section-\(section.id)", title: section.heading, body: section.body))
+        }
+        return blocks
+    }
 }
 
 struct Variant: Codable, Hashable, Identifiable {
