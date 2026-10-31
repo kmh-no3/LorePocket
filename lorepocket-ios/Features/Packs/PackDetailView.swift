@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import UIKit
 
 struct PackDetailView: View {
     let pack: Pack

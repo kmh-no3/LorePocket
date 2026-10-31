@@ -8,6 +8,8 @@
 
 Xcode プロジェクトは `lorepocket-ios/` を synchronized root group として取り込んでいる。新しい Swift ファイルはそこに置いたので、`project.pbxproj` は編集していない。
 
+`PackDetailView` は `Image(uiImage:)` を使う。ターゲットの `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` では、分割後のファイルから UIKit の初期化子を呼ぶために `import UIKit` が要る。元の巨大ファイルはファイル先頭で UIKit を import していた。
+
 ## 移動したもの
 
 削除したファイル:
