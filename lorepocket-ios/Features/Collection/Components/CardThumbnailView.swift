@@ -37,6 +37,8 @@ struct CardThumbnailView: View {
                 }
             }
             .padding(10)
+            // 右上のお気に入りハート(44pt)とバッジが重ならないよう右側を空ける
+            .padding(.trailing, item.isOwned ? 34 : 0)
 
             if item.isOwned && (item.isFavorite || onToggleFavorite != nil) {
                 VStack {
