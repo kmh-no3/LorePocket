@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1D99B3E990486CB64E587F06 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28418694C13EA418D081B890 /* Foundation.framework */; };
 		69A7C6950E70FB55982097FA /* LorePocketSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE6AA674AB5004D42FF95070 /* LorePocketSmokeUITests.swift */; };
+		D4B3295D49714809D8A2B5D5 /* CollectionNavProbeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B702A1D053A918F1242ACE5E /* CollectionNavProbeUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,6 +26,7 @@
 		17994FA22F079C1D003420FE /* lorepocket-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "lorepocket-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		28418694C13EA418D081B890 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		69405C06C43D5CB3C9F3E1E9 /* lorepocketUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lorepocketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B702A1D053A918F1242ACE5E /* CollectionNavProbeUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CollectionNavProbeUITests.swift; sourceTree = "<group>"; };
 		FE6AA674AB5004D42FF95070 /* LorePocketSmokeUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LorePocketSmokeUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -88,6 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				FE6AA674AB5004D42FF95070 /* LorePocketSmokeUITests.swift */,
+				B702A1D053A918F1242ACE5E /* CollectionNavProbeUITests.swift */,
 			);
 			name = lorepocketUITests;
 			path = lorepocketUITests;
@@ -207,6 +210,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				69A7C6950E70FB55982097FA /* LorePocketSmokeUITests.swift in Sources */,
+				D4B3295D49714809D8A2B5D5 /* CollectionNavProbeUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
