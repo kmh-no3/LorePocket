@@ -184,9 +184,10 @@ final class LorePocketSmokeUITests: XCTestCase {
         // 抽選は乱数なので、図鑑で「???」でない(=所持)カードを開く
         let byButton = app.scrollViews.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Sample ' OR label CONTAINS ', Sample ' OR label CONTAINS 'NEW'")).firstMatch
         let byText = app.scrollViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Sample '")).firstMatch
-        let ownedCard = byButton.waitForExistence(timeout: 3) ? byButton : byText
+        let ownedCard = byText.waitForExistence(timeout: 3) ? byText : byButton
         if ownedCard.waitForExistence(timeout: 3) {
             ownedCard.tap()
+            check(app.navigationBars["詳細"].waitForExistence(timeout: 5), "C 図鑑から所持カードの詳細を開ける")
             let ed = app.textViews["自分の考察"]
             reveal(ed)
             check(ed.exists && (ed.value as? String)?.contains("UIテスト用の考察メモ") == true, "C 考察が図鑑から開き直しても再表示される")
