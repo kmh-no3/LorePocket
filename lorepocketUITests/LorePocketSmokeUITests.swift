@@ -181,12 +181,15 @@ final class LorePocketSmokeUITests: XCTestCase {
         let thumbs = app.scrollViews.buttons.allElementsBoundByIndex.filter { $0.label != "お気に入りを外す" && $0.label != "お気に入りにする" }
         check(!thumbs.isEmpty, "C 図鑑にカード表示(所持/未所持)")
         // 考察の再表示: 獲得カード(Sample Writer)を図鑑から開き直す
-        let ownedCard = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Sample Writer'")).firstMatch
-        if ownedCard.waitForExistence(timeout: 5) {
+        // 抽選は乱数なので、図鑑で「???」でない(=所持)カードを開く
+        let byButton = app.scrollViews.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Sample ' OR label CONTAINS ', Sample ' OR label CONTAINS 'NEW'")).firstMatch
+        let byText = app.scrollViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Sample '")).firstMatch
+        let ownedCard = byButton.waitForExistence(timeout: 3) ? byButton : byText
+        if ownedCard.waitForExistence(timeout: 3) {
             ownedCard.tap()
             let ed = app.textViews["自分の考察"]
             reveal(ed)
-            check((ed.value as? String)?.contains("UIテスト用の考察メモ") == true, "C 考察が図鑑から開き直しても再表示される")
+            check(ed.exists && (ed.value as? String)?.contains("UIテスト用の考察メモ") == true, "C 考察が図鑑から開き直しても再表示される")
             shot("19-reflection-reloaded")
         } else {
             check(false, "C 考察の再表示(獲得カードを特定できず)")
