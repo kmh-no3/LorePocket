@@ -6,13 +6,33 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1D99B3E990486CB64E587F06 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28418694C13EA418D081B890 /* Foundation.framework */; };
+		69A7C6950E70FB55982097FA /* LorePocketSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE6AA674AB5004D42FF95070 /* LorePocketSmokeUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DBB2084C4509AF2757FB3503 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 17994F9A2F079C1D003420FE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 17994FA12F079C1D003420FE;
+			remoteInfo = "lorepocket-ios";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		17994FA22F079C1D003420FE /* lorepocket-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "lorepocket-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		28418694C13EA418D081B890 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		69405C06C43D5CB3C9F3E1E9 /* lorepocketUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lorepocketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE6AA674AB5004D42FF95070 /* LorePocketSmokeUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LorePocketSmokeUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		17994FA42F079C1D003420FE /* lorepocket-ios */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "lorepocket-ios";
 			sourceTree = "<group>";
 		};
@@ -26,14 +46,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F61387E75745E6E2F0CD5665 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D99B3E990486CB64E587F06 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		15447B95C2428608CA357DB8 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				28418694C13EA418D081B890 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		17994F992F079C1D003420FE = {
 			isa = PBXGroup;
 			children = (
 				17994FA42F079C1D003420FE /* lorepocket-ios */,
 				17994FA32F079C1D003420FE /* Products */,
+				E4919C56C4340BFD9F4891F2 /* Frameworks */,
+				607DB4272AF784EBA7EE6113 /* lorepocketUITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -41,8 +79,26 @@
 			isa = PBXGroup;
 			children = (
 				17994FA22F079C1D003420FE /* lorepocket-ios.app */,
+				69405C06C43D5CB3C9F3E1E9 /* lorepocketUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		607DB4272AF784EBA7EE6113 /* lorepocketUITests */ = {
+			isa = PBXGroup;
+			children = (
+				FE6AA674AB5004D42FF95070 /* LorePocketSmokeUITests.swift */,
+			);
+			name = lorepocketUITests;
+			path = lorepocketUITests;
+			sourceTree = "<group>";
+		};
+		E4919C56C4340BFD9F4891F2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				15447B95C2428608CA357DB8 /* iOS */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -64,11 +120,27 @@
 				17994FA42F079C1D003420FE /* lorepocket-ios */,
 			);
 			name = "lorepocket-ios";
-			packageProductDependencies = (
-			);
 			productName = "lorepocket-ios";
 			productReference = 17994FA22F079C1D003420FE /* lorepocket-ios.app */;
 			productType = "com.apple.product-type.application";
+		};
+		5F0724DE1AFBEA0BD06584C8 /* lorepocketUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C6FDD2BE9CE8CA9375AF5B5B /* Build configuration list for PBXNativeTarget "lorepocketUITests" */;
+			buildPhases = (
+				91CE32A9CDF0CEF106068FCC /* Sources */,
+				F61387E75745E6E2F0CD5665 /* Frameworks */,
+				FB05847457A581A493CB0700 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6E5C575C3239F57661ADA5AB /* PBXTargetDependency */,
+			);
+			name = lorepocketUITests;
+			productName = lorepocketUITests;
+			productReference = 69405C06C43D5CB3C9F3E1E9 /* lorepocketUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -100,12 +172,20 @@
 			projectRoot = "";
 			targets = (
 				17994FA12F079C1D003420FE /* lorepocket-ios */,
+				5F0724DE1AFBEA0BD06584C8 /* lorepocketUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		17994FA02F079C1D003420FE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB05847457A581A493CB0700 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +202,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		91CE32A9CDF0CEF106068FCC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69A7C6950E70FB55982097FA /* LorePocketSmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6E5C575C3239F57661ADA5AB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "lorepocket-ios";
+			target = 17994FA12F079C1D003420FE /* lorepocket-ios */;
+			targetProxy = DBB2084C4509AF2757FB3503 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		17994FAB2F079C1F003420FE /* Debug */ = {
@@ -306,6 +403,37 @@
 			};
 			name = Release;
 		};
+		6E36ACAFBD1216E460347E82 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kmh-no3.lorepocketUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "lorepocket-ios";
+			};
+			name = Debug;
+		};
+		D614FE18F7955E052A54A0C9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kmh-no3.lorepocketUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "lorepocket-ios";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -323,6 +451,15 @@
 			buildConfigurations = (
 				17994FAE2F079C1F003420FE /* Debug */,
 				17994FAF2F079C1F003420FE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C6FDD2BE9CE8CA9375AF5B5B /* Build configuration list for PBXNativeTarget "lorepocketUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D614FE18F7955E052A54A0C9 /* Release */,
+				6E36ACAFBD1216E460347E82 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
