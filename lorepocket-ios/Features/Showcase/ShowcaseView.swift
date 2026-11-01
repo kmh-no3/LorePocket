@@ -19,15 +19,7 @@ struct ShowcaseView: View {
         let presentation = vm.presentation
 
         VStack(spacing: 12) {
-            RealityView { content in
-                let root = scene.makeRoot()
-                content.add(root)
-                scene.setRotationY(rotationY)
-                scene.apply(presentation)
-            } update: { content in
-                scene.setRotationY(rotationY)
-                scene.apply(presentation)
-            }
+            showcaseCanvas(rotationY: rotationY, presentation: presentation)
             .frame(height: 420)
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -90,6 +82,24 @@ struct ShowcaseView: View {
         .padding()
         .onDisappear {
             cancelResetAnimation()
+        }
+    }
+
+    /// iOS 18 以降は RealityView、iOS 17 は ARView(.nonAR) で同じ ShowcaseScene を描く。
+    @ViewBuilder
+    private func showcaseCanvas(rotationY: Float, presentation: ShowcasePresentation) -> some View {
+        if #available(iOS 18.0, *) {
+            RealityView { content in
+                let root = scene.makeRoot()
+                content.add(root)
+                scene.setRotationY(rotationY)
+                scene.apply(presentation)
+            } update: { content in
+                scene.setRotationY(rotationY)
+                scene.apply(presentation)
+            }
+        } else {
+            LegacyShowcaseARView(scene: scene, rotationY: rotationY, presentation: presentation)
         }
     }
 
@@ -188,5 +198,31 @@ private struct ShowcaseOptionButtons<Option: Identifiable & Equatable>: View {
             Button(title(option)) { select(option) }
                 .buttonStyle(.bordered)
         }
+    }
+}
+
+/// iOS 17 向けフォールバック。RealityView(iOS 18+) の代わりに非AR の ARView を使う。
+private struct LegacyShowcaseARView: UIViewRepresentable {
+    let scene: ShowcaseScene
+    let rotationY: Float
+    let presentation: ShowcasePresentation
+
+    func makeUIView(context: Context) -> ARView {
+        let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
+        view.environment.background = .color(.clear)
+        let anchor = AnchorEntity(world: .zero)
+        anchor.addChild(scene.makeRoot())
+        let camera = PerspectiveCamera()
+        camera.look(at: [0, -0.02, 0], from: [0, 0.15, 1.1], relativeTo: nil)
+        anchor.addChild(camera)
+        view.scene.addAnchor(anchor)
+        scene.setRotationY(rotationY)
+        scene.apply(presentation)
+        return view
+    }
+
+    func updateUIView(_ uiView: ARView, context: Context) {
+        scene.setRotationY(rotationY)
+        scene.apply(presentation)
     }
 }

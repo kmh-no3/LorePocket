@@ -28,7 +28,7 @@ struct CardThumbnailView: View {
             .frame(height: 160, alignment: .bottomLeading)
             .opacity(item.isOwned ? 1.0 : 0.35)
 
-            HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 if item.isNew && item.isOwned {
                     CollectionBadge(text: "NEW")
                 }
@@ -37,6 +37,8 @@ struct CardThumbnailView: View {
                 }
             }
             .padding(10)
+            // 右上のお気に入りハート(44pt)とバッジが重ならないよう右側を空け、バッジは縦に積む
+            .padding(.trailing, item.isOwned ? 34 : 0)
 
             if item.isOwned && (item.isFavorite || onToggleFavorite != nil) {
                 VStack {
@@ -70,6 +72,8 @@ private struct CollectionBadge: View {
     var body: some View {
         Text(text)
             .font(.caption2).bold()
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(.ultraThinMaterial)

@@ -60,7 +60,11 @@ struct CollectionView: View {
                     } else {
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(vm.filteredItems) { item in
-                                NavigationLink(value: item) {
+                                // 図鑑タブでは CollectionView 自体が destination 型リンクで push されるため、
+                                // value 型リンク + navigationDestination が解決されず遷移しない。destination 型に揃える。
+                                NavigationLink {
+                                    CardDetailView(cardId: item.cardId, pack: pack, store: store)
+                                } label: {
                                     CardThumbnailView(item: item) {
                                         viewModel.toggleFavorite(cardId: item.cardId)
                                     }
@@ -75,9 +79,6 @@ struct CollectionView: View {
         }
         .navigationTitle("コレクション")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: CardListItem.self) { item in
-            CardDetailView(cardId: item.cardId, pack: pack, store: store)
-        }
         .onAppear {
             viewModel.refresh()
         }

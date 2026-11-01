@@ -27,6 +27,7 @@ struct CardDetailView: View {
 
     private func saveReflection() {
         store?.setReflection(packId: pack.id, cardId: card.id, body: reflectionDraft)
+        reflectionFocused = false
     }
 
     @ViewBuilder
@@ -43,6 +44,7 @@ struct CardDetailView: View {
     @State private var selectedVariantId: String? = nil
     @State private var copiedToast = false
     @State private var reflectionDraft = ""
+    @FocusState private var reflectionFocused: Bool
     @State private var reflectionReady = false
 
     private var ownedVariantIds: Set<String> {
@@ -171,6 +173,7 @@ struct CardDetailView: View {
             if store != nil {
                 Section("考察") {
                     TextEditor(text: $reflectionDraft)
+                        .focused($reflectionFocused)
                         .frame(minHeight: 160)
                         .accessibilityLabel("自分の考察")
                     Button("考察を保存") {
